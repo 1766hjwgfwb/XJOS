@@ -19,15 +19,20 @@ call print
 xchg bx, bx ; bochs debug
 
 mov edi, 0x1000     ; cpu -> memory 0x1000
-mov ecx, 0          ; staring sector
-mov bl, 1           ; sector size
+mov ecx, 2          ; staring sector
+mov bl, 4           ; sector size
 
 
 
 call read_disk
 
-xchg bx, bx ; bochs debug
+; 0x1000 0xaa 0x1001 0x55
+cmp word [0x1000], 0x55aa   ; small store
+; if magic number is not correct, jump to error
+jnz Error
 
+; jump to kernel
+jmp 0:0x1002
 
 
 jmp $
@@ -125,6 +130,12 @@ read_disk:
 
 string:
     db "Booting XJOS...", 10, 13, 0  ; '\n' '\r'
+
+Error:
+    mov si, .msg
+    call print
+    hlt
+    .msg db "Booting failed.", 10, 13, 0
 
 
 times 510 - ($ - $$) db 0
