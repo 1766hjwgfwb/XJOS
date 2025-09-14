@@ -29,7 +29,7 @@ call read_disk
 ; 0x1000 0xaa 0x1001 0x55
 cmp word [0x1000], 0x55aa   ; small store
 ; if magic number is not correct, jump to error
-jnz Error
+jnz error
 
 ; jump to kernel
 jmp 0:0x1002
@@ -131,7 +131,7 @@ read_disk:
 string:
     db "Booting XJOS...", 10, 13, 0  ; '\n' '\r'
 
-Error:
+error:
     mov si, .msg
     call print
     hlt
