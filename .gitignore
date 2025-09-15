@@ -2,4 +2,5 @@
 build/
 docs/
 src/bochsrc
-src/*.ini
+*.ini
+bochs/

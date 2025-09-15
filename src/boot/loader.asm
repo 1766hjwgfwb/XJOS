@@ -102,13 +102,94 @@ protected_mode:
 
     mov esp, 0x10000  ; stack pointer
 
-    mov byte [0xb8000], 'P'
+    mov edi, 0x10000
+    mov ecx, 10
+    mov bl, 200
+    
+    call read_disk
 
-    mov byte [0x200000], 'H'    ; test 0 ~ 4GB memory
+    ; jump to kernel
+    jmp dword code_selector:0x10000
 
-    xchg bx, bx ; bochs debug
+    ; hlt
+    ud2
 
 jmp $
+
+
+read_disk:
+    mov dx, 0x1f2     ; read sector acomount
+    mov al, bl
+    out dx, al        ; al/ax/eax
+
+    ; 0 ~ 7 bits
+    inc dx ; dx + 1 = 0x1f3
+    mov al, cl
+    out dx, al
+
+    ; 8 ~ 15 bits
+    inc dx
+    shr ecx, 8
+    mov al, cl
+    out dx, al
+
+    ; 16 ~ 23 bits
+    inc dx
+    shr ecx, 8
+    mov al, cl
+    out dx, al
+
+    ; 24 ~ 27 bits
+    inc dx
+    shr ecx, 8  ; now 24 ~ 31 bits
+    and cl, 0b1111  ; set 24 ~ 27
+    mov al, 0b1110_0000 ; set 28 ~ 31
+    or al, cl
+    out dx, al  ; LBA mode
+
+    inc dx
+    mov al, 0x20    ; read command
+    out dx, al
+
+
+    xor ecx, ecx     ; clear ecx
+    mov cl, bl       ; sector size
+
+    .read:
+        push cx
+        call .waits     ; wait for disk ready
+        call .reads     ; read sector
+        pop cx
+        loop .read      ; `cx` control cycling amount
+    
+    ret
+
+    .waits:
+        mov dx, 0x1f7    ; disk status
+        .check
+            in al, dx
+            ; delay
+            jmp $+2
+            jmp $+2
+            jmp $+2
+        
+            and al, 0b1000_1000
+            cmp al, 0b0000_1000 ; disk ready
+            jnz .check
+        ret
+
+    .reads:
+        mov dx, 0x1f0    ; data port
+        mov cx, 256      ; read 256 words (512 bytes)
+        .readw:
+            in ax, dx
+            jmp $+2
+            jmp $+2
+            jmp $+2
+            mov [edi], ax
+            add edi, 2    ; next word
+            loop .readw
+        ret
 
 
 code_selector equ (1 << 3) ; 0x08

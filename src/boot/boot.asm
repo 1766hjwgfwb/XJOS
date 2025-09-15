@@ -16,10 +16,10 @@ mov sp, 0x7c00
 mov si, string
 call print
 
-xchg bx, bx ; bochs debug
+; xchg bx, bx ; bochs debug
 
 mov edi, 0x1000     ; cpu -> memory 0x1000
-mov ecx, 2          ; staring sector
+mov ecx, 2          ; staring sector       
 mov bl, 4           ; sector size
 
 
