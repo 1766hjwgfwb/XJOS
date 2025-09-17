@@ -4,3 +4,4 @@ docs/
 src/bochsrc
 *.ini
 bochs/
+test/
