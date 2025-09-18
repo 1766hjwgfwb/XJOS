@@ -1,4 +1,4 @@
-#include <xjos/string.h>
+#include <libc/string.h>
 
 
 char *strcpy(char *dest, const char *src) {

@@ -5,3 +5,4 @@ src/bochsrc
 *.ini
 bochs/
 test/
+*.py

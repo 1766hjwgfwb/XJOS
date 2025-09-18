@@ -1,6 +1,6 @@
-#include <xjos/console.h>
-#include <xjos/io.h>
-#include <xjos/string.h>
+#include <drivers/console.h>
+#include <hardware/io.h>
+#include <libc/string.h>
 
 static void get_screen();
 static void set_screen();
@@ -135,7 +135,6 @@ static void srcoll_up() {
         // new pos = pos - offset(screen - mem_base)
         screen = MEM_BASE;
 
-        set_cursor();
     }
 
     set_screen();
