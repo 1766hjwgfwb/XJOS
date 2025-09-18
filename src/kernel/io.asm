@@ -1,67 +1,67 @@
 [bits 32]
 
-section .text; 代码段
+section .text  ; code section
 
-global inb ; 将 inb 导出
+global inb ; export inb
 inb:
-    push ebp; 
-    mov ebp, esp ; 保存帧
+    push ebp ; save frame pointer
+    mov ebp, esp ; save stack pointer
 
-    xor eax, eax ; 将 eax 清空
-    mov edx, [ebp + 8]; port 
-    in al, dx; 将端口号 dx 的 8 bit 输入到 al
+    xor eax, eax ; clear eax
+    mov edx, [ebp + 8] ; get port number
+    in al, dx ; read 8 bits from port dx
 
-    jmp $+2 ; 一点点延迟
-    jmp $+2 ; 一点点延迟
-    jmp $+2 ; 一点点延迟
+    jmp $+2 ; delay
+    jmp $+2 ; delay
+    jmp $+2 ; delay
 
-    leave ; 恢复栈帧
+    leave ; restore stack pointer
     ret
 
 global outb
 outb:
-    push ebp; 
-    mov ebp, esp ; 保存帧
+    push ebp ; save frame pointer
+    mov ebp, esp ; save stack pointer
 
-    mov edx, [ebp + 8]; port 
-    mov eax, [ebp + 12]; value
-    out dx, al; 将 al 中的 8 bit 输入出道 端口号 dx
+    mov edx, [ebp + 8] ; get port number
+    mov eax, [ebp + 12] ; get value
+    out dx, al ; write 8 bits to port dx
 
-    jmp $+2 ; 一点点延迟
-    jmp $+2 ; 一点点延迟
-    jmp $+2 ; 一点点延迟
+    jmp $+2 ; delay
+    jmp $+2 ; delay
+    jmp $+2 ; delay
 
-    leave ; 恢复栈帧
+    leave ; restore stack pointer
     ret
 
 global inw
 inw:
     push ebp; 
-    mov ebp, esp ; 保存帧
+    mov ebp, esp
 
-    xor eax, eax ; 将 eax 清空
-    mov edx, [ebp + 8]; port 
-    in ax, dx; 将端口号 dx 的 16 bit 输入到 ax
+    xor eax, eax 
+    mov edx, [ebp + 8]
+    in ax, dx
 
-    jmp $+2 ; 一点点延迟
-    jmp $+2 ; 一点点延迟
-    jmp $+2 ; 一点点延迟
+    jmp $+2
+    jmp $+2 
+    jmp $+2 
 
-    leave ; 恢复栈帧
+    leave
     ret
 
 global outw
 outw:
     push ebp; 
-    mov ebp, esp ; 保存帧
+    mov ebp, esp
 
-    mov edx, [ebp + 8]; port 
-    mov eax, [ebp + 12]; value
-    out dx, ax; 将 ax 中的 16 bit 输入出道 端口号 dx
+    mov edx, [ebp + 8]
+    mov eax, [ebp + 12]
+    out dx, ax
 
-    jmp $+2 ; 一点点延迟
-    jmp $+2 ; 一点点延迟
-    jmp $+2 ; 一点点延迟
+    jmp $+2 
+    jmp $+2  
+    jmp $+2 
 
-    leave ; 恢复栈帧
+    leave 
     ret

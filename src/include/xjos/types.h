@@ -1,13 +1,14 @@
 #ifndef ONIX_TYPES_H
 #define ONIX_TYPES_H
 
-#define EOF -1 // END OF FILE
+#define EOF (-1) // END OF FILE
+#define EOS '\0'  // END OF STRING
 
-#define NULL 0 // NULL pointer
+#define NULL ((void*)0) // NULL pointer
 
 #define bool _Bool
-#define true 1
-#define false 0
+#define true (1)
+#define false (0)
 
 #define _packed __attribute__((packed))  // * disable byte alignment 
 
