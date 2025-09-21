@@ -2,6 +2,7 @@
 
 #include <libc/stdarg.h>
 #include <libc/string.h>
+#include <libc/assert.h>
 
 #define ZEROPAD 1   // Pad with zero
 #define SIGN 2      // Unsigned/signed long
@@ -274,6 +275,8 @@ int vsprintf(char *buf, const char *fmt, va_list args) {
         }
     }
     *str = '\0';
+
+    assert((str - buf) < 1024);
     return str - buf;
 }
 
