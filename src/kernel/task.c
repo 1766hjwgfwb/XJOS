@@ -1,5 +1,5 @@
 #include <xjos/task.h>
-#include <libc/printk.h>
+#include <xjos/printk.h>
 #include <xjos/debug.h>
 
 #define PAGE_SIZE 0x1000

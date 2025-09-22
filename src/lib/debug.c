@@ -1,6 +1,6 @@
 #include <xjos/debug.h>
 #include <libc/stdarg.h>
-#include <libc/printk.h>
+#include <xjos/printk.h>
 
 
 static char buf[1024];

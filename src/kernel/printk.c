@@ -1,4 +1,4 @@
-#include <libc/printk.h>
+#include <xjos/printk.h>
 #include <drivers/console.h>
 
 

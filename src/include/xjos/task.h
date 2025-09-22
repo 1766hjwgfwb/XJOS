@@ -1,4 +1,5 @@
-#pragma once
+#ifndef XJOS_TASK_H
+#define XJOS_TASK_H
 #include <xjos/types.h>
 
 
@@ -21,3 +22,6 @@ typedef struct {
 
 
 void task_init();
+
+
+#endif /* _XJOS_TASK_H_ */
