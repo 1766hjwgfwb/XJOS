@@ -1,11 +1,8 @@
-#include <xjos/kernel.h>
-#include <drivers/console.h>
-#include <xjos/printk.h>
-#include <xjos/global.h>
-#include <xjos/task.h>
-#include <xjos/interrupt.h>
-#include <xjos/debug.h>
-#include <xjos/stdlib.h>
+extern void console_init();
+extern void gdt_init();
+extern void interrupt_init();
+extern void clock_init();
+extern void hang();
 
 
 void kernel_init() {
@@ -13,19 +10,13 @@ void kernel_init() {
     gdt_init();
 
     interrupt_init();
-    
-    asm volatile(
-        "sti\n"
-        "movl %eax, %eax\n"
-    );
 
+    clock_init();
 
-    u32 count = 0;
+    asm volatile("sti\n");
+    hang();
 
-    while(1) {
-        DEBUGK("looping in kernel init %d\n", count++);
-        delay(10000000);
-    }
+    // task_init();
 
     return;
 }

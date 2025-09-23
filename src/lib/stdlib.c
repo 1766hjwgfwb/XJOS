@@ -3,7 +3,8 @@
 
 
 void delay(u32 count) {
-    while(count--);
+    while(count--)
+        asm volatile("nop");
 }
 
 

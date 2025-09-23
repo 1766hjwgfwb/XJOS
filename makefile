@@ -27,7 +27,7 @@ CFLAGS += -g                       # Add debug info
 CFLAGS += -I$(SRC_DIR)/include     # Add include path
 
 # Assembler options (for kernel)
-ASMFLAGS := -f elf32 -g
+ASMFLAGS := -f elf32 -g -F dwarf
 
 # Linker options
 LDFLAGS := -m elf_i386 -static

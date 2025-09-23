@@ -3,6 +3,8 @@
 #include <xjos/debug.h>
 #include <xjos/printk.h>
 #include <xjos/stdlib.h>
+#include <hardware/io.h>
+#include <libc/assert.h>
 
 
 #define LOGK(fmt, args...) DEBUGK(fmt, ##args)
@@ -62,14 +64,45 @@ void send_eoi(int vector) {
 }
 
 
-u32 count = 0;
-void default_handler(int vector) {
-    send_eoi(vector);
-    LOGK("[%d] default outside handler %d...\n", vector, count);
+void set_interrupt_handler(u32 irq, handler_t handler) {
+    assert(irq >= 0 && irq < 16);
+    handler_table[IRQ_MASTER_NR + irq] = handler;
 }
 
 
-void exception_handler(int vector) {
+void set_interrupt_mask(u32 irq, bool enable) {
+    assert(irq >= 0 && irq < 16);
+
+    u16 port;
+
+    if (irq < 8) {
+        port = PIC_M_DATA;  //master
+    } else {
+        port = PIC_S_DATA;  // slave
+        irq -= 8;
+    }
+
+    // exp. irp = 2, 1 << irq, 00000100
+    if (enable) {
+        outb(port, inb(port) & ~(1 << irq));
+    } else {
+        outb(port, inb(port) | (1 << irq));
+    }
+}
+
+
+u32 count = 0;
+void default_handler(int vector) {
+    send_eoi(vector);
+    // schedule();
+    DEBUGK("[%x] default interrupt called %d...\n", vector, count);
+}
+
+
+void exception_handler(int vector, u32 edi, u32 esi, u32 ebp, u32 esp,
+    u32 ebx, u32 edx, u32 ecx, u32 eax,
+    u32 gs, u32 fs, u32 es, u32 ds,
+    u32 vector0, u32 error, u32 eip, u32 cs, u32 eflags) {
     char *message = NULL;
 
     // if vector < 22 excep
@@ -80,8 +113,15 @@ void exception_handler(int vector) {
         message = messages[15];
     }
 
-    printk("Exception: [0x%02x] %s \n", vector, messages[vector]);
+    printk("\nEXCEPTION: %s\n", messages[vector]);
+    printk("    VECTOR : 0x%02x\n", vector);
+    printk("    ERROR  : 0x%02x\n", error);
+    printk("    EFLAGS : 0x%08x\n", eflags);
+    printk("    CS     : 0x%02x\n", cs);
+    printk("    EIP    : 0x%08x\n", eip);
+    printk("    ESP    : 0x%08x\n", esp);
 
+    // stoppage
     hang();
 }
 
@@ -99,7 +139,7 @@ static void pic_init() {
     outb(PIC_S_DATA, 2);            // slave connected to master, IR2
     outb(PIC_S_DATA, 0b00000001);   // 8086, Manual send eoi
 
-    outb(PIC_M_DATA, 0b11111110);   // mask all(open IRO) interrupts
+    outb(PIC_M_DATA, 0b11111111);   // mask all(open IRO) interrupts
     outb(PIC_S_DATA, 0b11111111);   // mask all interrupts
 }
 

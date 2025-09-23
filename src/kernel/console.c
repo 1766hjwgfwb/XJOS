@@ -120,7 +120,7 @@ static void command_cr() {
 
 static void srcoll_up() {
     if (screen + SCR_SIZE + ROW_SIZE < MEM_END) {
-        u32 *ptr = (u32 *)(screen + SCR_SIZE);
+        u16 *ptr = (u16 *)(screen + SCR_SIZE);
         for (size_t i = 0; i < WIDTH; i++) {
             *ptr++ = erase;     // empty
         }
@@ -128,13 +128,28 @@ static void srcoll_up() {
         screen += ROW_SIZE;
         pos += ROW_SIZE;
     } else {
-        pos -= (screen - MEM_BASE);
+        asm volatile("cli\n");
+        pos -= (screen - MEM_BASE);     // ! Concurrency bug 
 
-        memcpy(MEM_BASE, screen, SCR_SIZE);
+        // copy 2-25 -> 1-24
+        // memcpy(MEM_BASE, screen + ROW_SIZE, SCR_SIZE - ROW_SIZE);
+
+        u32 *dst = (u32*)MEM_BASE;
+        u32 *src = (u32*)(screen + ROW_SIZE);
+        for (int i = 0; i < (SCR_SIZE - ROW_SIZE)/4; i++) {
+            dst[i] = src[i];
+        }
+
+        // clear last row
+        u16 *ptr = (u16 *)(MEM_BASE + SCR_SIZE - ROW_SIZE);
+        for (size_t i = 0; i < WIDTH; i++) {
+            *ptr++ = erase;
+        }
         // pos = mem_base + (y * row_size + x);
         // new pos = pos - offset(screen - mem_base)
         screen = MEM_BASE;
 
+        asm volatile("sti\n");
     }
 
     set_screen();
@@ -155,7 +170,7 @@ void console_write(const char *buf, u32 count) {
             case BEL:       // \a
                 break;
             case BS:        // \b
-                command_cr();
+                command_bs();
                 break;      
             case HT:        // \t   
                 break;

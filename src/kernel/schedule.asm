@@ -15,13 +15,6 @@ task_switch:
 
     mov [eax], esp
 
-    ; mov ecx, 50000000 ; 500ms
-    ; cly:
-    ;     jmp $+2
-    ;     jmp $+2
-    ;     jmp $+2
-    ;     loop cly
-
     ; [eax] value = 0x1fec or 0x2fec
     mov eax, [ebp + 8]
     mov esp, [eax]

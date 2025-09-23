@@ -9,7 +9,7 @@ gdt_ptr_t gdt_ptr;
 
 // Taking over the GDT table from the kernel
 void gdt_init() {
-    // DEBUGK("init gdt!!!\n");
+    DEBUGK("init gdt!!!\n");
 
     asm volatile("sgdt gdt_ptr");
 

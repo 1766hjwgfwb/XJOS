@@ -12,6 +12,8 @@
 
 #define _packed __attribute__((packed))  // * disable byte alignment 
 
+#define _ofp __attribute__((optimize("omit-frame-pointer")))
+
 typedef unsigned int size_t;
 
 typedef char int8;
