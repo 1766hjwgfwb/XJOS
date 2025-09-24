@@ -154,6 +154,9 @@ static void srcoll_up() {
 
     set_screen();
 }
+
+
+extern void start_beep();
  
 
 void console_write(const char *buf, u32 count) {
@@ -168,6 +171,7 @@ void console_write(const char *buf, u32 count) {
             case ESC:       // esc
                 break;
             case BEL:       // \a
+                start_beep();
                 break;
             case BS:        // \b
                 command_bs();

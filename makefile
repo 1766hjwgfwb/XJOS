@@ -46,7 +46,7 @@ ASM_OBJS := $(patsubst $(SRC_DIR)/%.asm, $(BUILD_DIR)/%.o, $(ASM_SOURCES))
 
 # 3. Specify the kernel entry object, and exclude it from the total .o list 
 #    to ensure it's the first in linking
-ENTRY_OBJ  := $(BUILD_DIR)/kernel/start.o
+ENTRY_OBJ  := $(BUILD_DIR)/kernel/x86/start.o
 OTHER_OBJS := $(filter-out $(ENTRY_OBJ), $(C_OBJS) $(ASM_OBJS))
 
 # ====================================================================
@@ -113,16 +113,23 @@ bochs: $(BUILD_DIR)/master.img
 
 qemu: $(BUILD_DIR)/master.img
 	qemu-system-i386 \
+		-rtc base=localtime \
 		-m 32M \
 		-boot c \
-		-hda $<
+		-drive file=build/master.img,if=ide,index=0,media=disk,format=raw \
+    	-audiodev pa,id=hda \
+    	-machine pcspk-audiodev=hda
 
 qemug: $(BUILD_DIR)/master.img
 	qemu-system-i386 \
 		-s -S \
 		-m 32M \
 		-boot c \
-		-hda $<
+		-drive file=build/master.img,if=ide,index=0,media=disk,format=raw \
+    	-audiodev pa,id=hda \
+    	-machine pcspk-audiodev=hda
+
+
 
 $(BUILD_DIR)/master.vmdk: $(BUILD_DIR)/master.img
 	qemu-img convert -O vmdk $< $@

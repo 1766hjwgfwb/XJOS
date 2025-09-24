@@ -91,11 +91,10 @@ void set_interrupt_mask(u32 irq, bool enable) {
 }
 
 
-u32 count = 0;
 void default_handler(int vector) {
     send_eoi(vector);
     // schedule();
-    DEBUGK("[%x] default interrupt called %d...\n", vector, count);
+    DEBUGK("[%x] default interrupt called %d...\n", vector);
 }
 
 
