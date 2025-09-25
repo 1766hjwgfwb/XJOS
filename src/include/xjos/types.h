@@ -1,6 +1,8 @@
 #ifndef ONIX_TYPES_H
 #define ONIX_TYPES_H
 
+#include <xjos/xjos.h>
+
 #define EOF (-1) // END OF FILE
 #define EOS '\0'  // END OF STRING
 

@@ -6,8 +6,6 @@
 #include <libc/assert.h>
 #include <xjos/stdlib.h>
 
-extern void time_init();
-
 
 #define LOGK(fmt, args...) DEBUGK(fmt, ##args)
 
@@ -41,6 +39,7 @@ void cmos_write(u8 addr, u8 data) {
 }
 
 
+extern void start_beep();
 
 
 void rtc_handler(int vector) {
@@ -54,7 +53,7 @@ void rtc_handler(int vector) {
 
     set_alarm(1);
 
-    time_init();
+    start_beep();
 }
 
 
@@ -94,6 +93,9 @@ void set_alarm(u32 secs) {
     cmos_write(CMOS_HOUR, bin_to_bcd(time.tm_hour));
     cmos_write(CMOS_MINUTE, bin_to_bcd(time.tm_min));
     cmos_write(CMOS_SECOND, bin_to_bcd(time.tm_sec));
+
+    cmos_write(CMOS_B, 0b00100010);
+    cmos_read(CMOS_C);
 }
 
 
@@ -101,13 +103,9 @@ void rtc_init() {
 
     // open alarm int
     // cmos_write(CMOS_B, 0b01000010);
-    cmos_write(CMOS_B, 0b00100010);
-    cmos_read(CMOS_C);
-
-    set_alarm(2);
 
     // set rtc hz
-    outb(CMOS_A, (inb(CMOS_A) & 0xf) | 0b1110);
+    // outb(CMOS_A, (inb(CMOS_A) & 0xf) | 0b1110);
 
     set_interrupt_handler(IRQ_RTC, rtc_handler);
     set_interrupt_mask(IRQ_RTC, true);

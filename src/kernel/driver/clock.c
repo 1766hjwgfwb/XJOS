@@ -50,17 +50,11 @@ void clock_handler(int vector) {
     assert(vector == 0x20);
 
     send_eoi(vector);
-    /* jiffies += jiffy;
 
-    if (jiffies % 10 == 0) {
-        DEBUGK("sleeping for 1 second %d\n", jiffies);
-    } */
-    if (jiffies % 100 == 0) {
-        start_beep();
-    }
-    
     jiffies++;
-    // DEBUGK("jiffies: %d\n", jiffies);
+/*     if (jiffies % 100 == 0) {
+        start_beep();
+    } */
 
     stop_beep();
 }

@@ -96,6 +96,7 @@ $(BUILD_DIR)/master.img: $(BUILD_DIR)/boot/boot.bin \
 	yes | bximage -q -hd=16 -func=create -sectsize=512 -imgmode=flat $@
 	dd if=$(BUILD_DIR)/boot/boot.bin of=$@ bs=512 count=1 conv=notrunc
 	dd if=$(BUILD_DIR)/boot/loader.bin of=$@ bs=512 count=4 seek=2 conv=notrunc
+	test -n "$$(find $(BUILD_DIR)/system.bin -size -100k)"
 	dd if=$(BUILD_DIR)/system.bin of=$@ bs=512 count=200 seek=10 conv=notrunc
 
 # ====================================================================

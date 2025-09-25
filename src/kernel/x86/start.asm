@@ -1,8 +1,17 @@
 [bits 32]
 
 extern kernel_init
+extern gdt_init
+extern memory_init
+extern console_init
 
 global _start
 _start:
+    push ebx  ; save ards_count
+    push eax  ; magic number
+
+    call console_init
+    call gdt_init
+    call memory_init
     call kernel_init
     jmp $

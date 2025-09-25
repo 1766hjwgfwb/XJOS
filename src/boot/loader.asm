@@ -33,7 +33,7 @@ detect_memory:
     jc error            ; if cf = 1
 
     add di, cx         ; move pointer to next entry
-    inc word [ards_count]
+    inc dword [ards_count]  ; 32bits dword
 
     cmp ebx, 0          ; if ebx = 0, end of table
     jnz .next
@@ -107,6 +107,9 @@ protected_mode:
     mov bl, 200
     
     call read_disk
+
+    mov eax, 0x20250901 ; magic number
+    mov ebx, ards_count
 
     ; jump to kernel
     jmp dword code_selector:0x10000
@@ -239,5 +242,5 @@ gdt_data:
 gdt_end:
 
 ards_count:
-    dw 0
+    dd 0
 ards_buffer:    ; get ARDS structure, ARDS is a structure to describe memory map 
