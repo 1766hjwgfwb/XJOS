@@ -152,22 +152,87 @@ static void put_page(u32 addr) {
 }
 
 
-void memory_test() {
-    LOGK("Memory test\n");
-    u32 pages[10];
+// get cr3 register value, page directory base address
+u32 get_cr3() {
+    asm volatile("movl %cr3, %eax\n");
+    // store eax, return cr3 value
+}
 
-    LOGK("Get 10 pages\n");
-    for (int i = 0; i < 10; i++) {
-        pages[i] = get_page();
-        LOGK("Page %d addr 0x%p\n", i, pages[i]);
+
+// arg pde is the page directory entry address
+void set_cr3(u32 pde) {
+    ASSERT_PAGE(pde);
+    asm volatile("movl %%eax, %%cr3\n" ::"a"(pde));
+}
+
+
+// set cr3 reg, PE -> 1, enable paging
+static void enable_page() {
+    asm volatile(
+        "movl %cr0, %eax\n"
+        "orl $0x80000000, %eax\n"
+        "movl %eax, %cr0\n"
+    );
+}
+
+
+static void entry_init(page_entry_t *entry, u32 index) {
+    *(u32 *)entry = 0;
+
+    entry->present = 1;
+    entry->write = 1;
+    entry->user = 1;
+    entry->index = index;
+}
+
+
+#define KERNEL_PAGE_DIR 0x200000
+#define KERNEL_PAGE_ENTRY 0x201000
+
+
+void mapping_int() {
+    /* 
+        one pde = 1024 pte, pte = 1024 * 4B = 4KB
+        pde = 1024 * 4KB = 4MB
+    */
+    page_entry_t *pde = (page_entry_t*)KERNEL_PAGE_DIR;
+    memset(pde, 0, PAGE_SIZE);
+
+    /*
+        0 -> 4M - 1
+        ped[0].index = 0x201
+    */
+    entry_init(pde, IDX(KERNEL_PAGE_ENTRY));    // 0x201
+
+    page_entry_t *pte = (page_entry_t*)KERNEL_PAGE_ENTRY;
+    page_entry_t *entry;
+
+/*   pyhsical 0x201000 (Page Table)
+     +-----------------------------------------------------------------+
+     | PTE[0] | PTE[1] | PTE[2] | ... | PTE[1023] |
+     +-----------------------------------------------------------------+
+     ^        ^        ^
+     |        |        |
+     0x201000 0x201004 0x201008
+
+     (Physical Page Frames)
+     +--------+--------+--------+-----+-----------+
+     | PFN 0  | PFN 1  | PFN 2  | ... | PFN 1023  |
+     +------------------------------------------------------------------+
+     ^        ^        ^               ^
+     |        |        |               |
+     0x0000   0x1000   0x2000          0x3FF000
+*/
+    for (size_t tidx = 0; tidx < 1024; tidx++) {
+        entry = &pte[tidx];
+        entry_init(entry, tidx);
+        memory_map[tidx] = 1;
     }
+    asm volatile("xchgw %bx, %bx\n");
 
-    LOGK("current free pages %d\n", free_pages);
+    set_cr3((u32)pde);
 
-    for (int i = 0; i < 10; i++) {
-        put_page(pages[i]);
-        LOGK("Put page %d addr 0x%p\n", i, pages[i]);
-    }
+    asm volatile("xchgw %bx, %bx\n");
 
-    LOGK("current free pages %d\n", free_pages);
+    enable_page();
 }

@@ -6,7 +6,7 @@ extern void hang();
 extern void time_init();
 extern void rtc_init();
 extern void memory_map_init();
-extern void memory_test();
+extern void mapping_int();
 
 
 void kernel_init() {
@@ -14,15 +14,17 @@ void kernel_init() {
     // gdt_init();
 
     memory_map_init();
+    mapping_int();
     interrupt_init();
 
-    memory_test();
-    clock_init();
+    asm volatile("xchgw %bx, %bx\n");
+    // memory_test();
+    // clock_init();
     // time_init();
 
     // rtc_init();
 
-    asm volatile("sti\n");
+    // asm volatile("sti\n");
 
     hang();
 }
