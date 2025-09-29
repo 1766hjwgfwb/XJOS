@@ -110,7 +110,7 @@ clean:
 	rm -rf $(BUILD_DIR)
 
 bochs: $(BUILD_DIR)/master.img
-	bochs -q -f ./bochs/bochsrc
+	bochs -q -f ./bochs/bochsrc -unlock
 
 qemu: $(BUILD_DIR)/master.img
 	qemu-system-i386 \

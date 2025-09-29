@@ -7,24 +7,25 @@ extern void time_init();
 extern void rtc_init();
 extern void memory_map_init();
 extern void mapping_int();
+extern void memory_test();
+#include <xjos/debug.h>
 
 
 void kernel_init() {
     // console_init();
     // gdt_init();
+    interrupt_init();
 
     memory_map_init();
     mapping_int();
-    interrupt_init();
 
-    asm volatile("xchgw %bx, %bx\n");
+    BMB;
+    console_init();
+    char *ptr = ((void*)0);
+    
+    ptr[0] = 'a';
+    BMB;
     // memory_test();
-    // clock_init();
-    // time_init();
-
-    // rtc_init();
-
-    // asm volatile("sti\n");
 
     hang();
 }
