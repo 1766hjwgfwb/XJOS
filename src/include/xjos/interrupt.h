@@ -53,4 +53,8 @@ void send_eoi(int vector);
 void set_interrupt_handler(u32 irq, handler_t handler);
 void set_interrupt_mask(u32 irq, bool enable);
 
+bool interrupt_disable();                   // clear IF flag
+bool get_interrupt_state();                 // get IF flag
+void set_interrupt_state(bool state);       // set IF flag
+
 #endif /* XJOS_INTERRUPT_H */

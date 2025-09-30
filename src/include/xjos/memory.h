@@ -24,5 +24,8 @@ typedef struct {
 u32 get_cr3();
 void set_cr3(u32 pde);
 
+// alloc and free count contiguous kernel pages
+u32 alloc_kpage(u32 count);
+void free_kpage(u32 vaddr, u32 count);
 
 #endif /* XJOS_MEMORY_H */

@@ -4,6 +4,7 @@
 #include <xjos/memory.h>
 #include <xjos/stdlib.h>
 #include <libc/string.h>
+#include <xjos/bitmap.h>
 
 
 #define LOGK(fmt, args...) DEBUGK(fmt, ##args)
@@ -33,9 +34,12 @@ static u32 KERNEL_PAGE_TABLE[] = {
     0x3000
 };
 
+#define KERNEL_MAP_BITS 0x4000
+
 // (table / sizeof(u32)) * 4M = 8M
 #define KERNEL_MEMORY_SIZE (0x100000 * sizeof(KERNEL_PAGE_TABLE))
 
+bitmap_t kernel_map;
 
 typedef struct {
     u64 base;   // memory base
@@ -131,6 +135,13 @@ void memory_map_init() {
     }
 
     LOGK("Total pages %d free pages %d\n", total_pages, free_pages);
+
+    // 2048 - 256 = 1792 page, need use bytes / 8 
+    u32 length = (IDX(KERNEL_MEMORY_SIZE) - IDX(MEMORY_BASE)) / 8;
+    bitmap_init(&kernel_map, (u8*)KERNEL_MAP_BITS, length, IDX(MEMORY_BASE));
+    bitmap_scan(&kernel_map, memory_map_pages);
+
+    free_kpage(alloc_kpage(1), 1);
 }
 
 
@@ -276,4 +287,67 @@ void mapping_int() {
     set_cr3((u32)pde);
 
     enable_page((u32)pde);
+}
+
+
+// find continuous count pages in bitmap
+static u32 scan_page(bitmap_t *map, u32 count) {
+    assert(count > 0);
+
+    int32 index = bitmap_scan(map, count);
+
+    if (index == EOF)
+        panic("Scan page fail!");
+    
+    idx_t addr = PAGE(index);
+    LOGK("Scan page addr 0x%p count %d\n", addr, count);
+    return addr;
+}
+
+
+// reset count pages in bitmap
+static void reset_page(bitmap_t *map, u32 addr, u32 count) {
+    ASSERT_PAGE(addr);
+    assert(count > 0);
+
+    idx_t index = IDX(addr);    // page nubmer
+
+    for (idx_t i = 0; i < count; i++) {
+        assert(bitmap_test(map, index + i));
+        bitmap_set(map, index + i, 0);
+    }
+}
+
+
+u32 alloc_kpage(u32 count) {
+    assert(count > 0);
+
+    idx_t vaddr = scan_page(&kernel_map, count);
+    LOGK("Alloc kernel pages 0x%p count %d\n", vaddr, count);
+    return vaddr;
+}
+
+
+void free_kpage(u32 vaddr, u32 count) {
+    ASSERT_PAGE(vaddr);
+    assert(count > 0);
+
+    reset_page(&kernel_map, vaddr, count);
+    LOGK("free kernel pages 0x%p count %d\n", vaddr, count);
+}
+
+
+void memory_test() {
+    BMB;
+    u32 *pages = (u32 *)(0x200000);
+    u32 count = 0x6fe;
+
+    for (size_t i = 0; i < count; i++) {
+        pages[i] = alloc_kpage(1);
+        LOGK("0x%x\n", i);
+    }
+
+    for (size_t i = 0; i < count; i++) {
+        free_kpage(pages[i], 1);
+    }
 }

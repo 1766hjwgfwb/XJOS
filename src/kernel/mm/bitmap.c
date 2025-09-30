@@ -11,9 +11,9 @@ void bitmap_init(bitmap_t *map, char *bits, u32 length, u32 start) {
 
 
 void bitmap_make(bitmap_t *map, char *bits, u32 length, u32 offset) {
-    map->bits = bits;
-    map->length = length;
-    map->offset = offset;
+    map->bits = bits;       // pointer to bits
+    map->length = length;   // bitmap length
+    map->offset = offset;   // logically start index
 }
 
 

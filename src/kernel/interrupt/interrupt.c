@@ -138,7 +138,7 @@ static void pic_init() {
     outb(PIC_S_DATA, 2);            // slave connected to master, IR2
     outb(PIC_S_DATA, 0b00000001);   // 8086, Manual send eoi
 
-    outb(PIC_M_DATA, 0b11111111);   // mask all(open IRO) interrupts
+    outb(PIC_M_DATA, 0b11111111);   // mask all interrupts
     outb(PIC_S_DATA, 0b11111111);   // mask all interrupts
 }
 
@@ -181,4 +181,39 @@ static void idt_init() {
 void interrupt_init() {
     pic_init();
     idt_init();
+}
+
+
+bool interrupt_disable() {
+    asm volatile(
+        "pushfl\n"
+        "cli\n"                 // clear IF flag
+        "popl %eax\n"
+        "shrl $9, %eax\n"
+        "andl $1, %eax\n"       // get IF flag
+    );
+}
+
+
+bool get_interrupt_state() {
+    asm volatile(
+        "pushfl\n"
+        "popl %eax\n"
+        "shrl $9, %eax\n"
+        "andl $1, %eax\n"
+    );
+}
+
+
+/*
+    Atomic operation
+    bool state = get_interrupt_state();
+    // do something
+    set_interrupt_state(state);
+*/
+void set_interrupt_state(bool state) {
+    if (state)
+        asm volatile("sti");
+    else
+        asm volatile("cli");
 }
