@@ -1,15 +1,37 @@
 #ifndef XJOS_TASK_H
 #define XJOS_TASK_H
+
 #include <xjos/types.h>
+#include <xjos/bitmap.h>
 
+#define KERNEL_USER 0
+#define NORMAL_USER 1
 
+#define TASK_NAME_LEN 16
 
 typedef u32 target_t();
 
+typedef enum {
+    TASK_INIT,          // Initial state
+    TASK_RUNNING,       // executing
+    TASK_READY,         // ready to run
+    TASK_BLOCKED,       // blockage
+    TASK_SLEEPING,      // sleeping
+    TASK_WAITING,       // waiting for a resource
+    TASK_DIED,          // task has died
+}task_state_t;
 
-typedef struct task_t {
-    u32 *stack; 
-
+typedef struct {
+    u32 *stack;              // kernel stack
+    task_state_t state;      // state   
+    u32 priority;            // priority
+    u32 ticks;               // ticks to sleep
+    u32 jiffies;             // global jiffies
+    u32 name[TASK_NAME_LEN]; // task name
+    u32 uid;                 // user id
+    u32 pde;                 // page directory entry
+    bitmap_t *vmap;          // process virtual memory bitmap
+    u32 magic;               // kernel magic number
 }task_t;
 
 typedef struct {
@@ -22,6 +44,8 @@ typedef struct {
 
 
 void task_init();
+task_t *running_task();
+void schedule();
 
 
 #endif /* _XJOS_TASK_H_ */

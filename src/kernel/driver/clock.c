@@ -2,6 +2,8 @@
 #include <xjos/interrupt.h>
 #include <libc/assert.h>
 #include <xjos/debug.h>
+#include <xjos/task.h>
+#include <xjos/xjos.h>
 extern void time_init();
 
 
@@ -52,11 +54,16 @@ void clock_handler(int vector) {
     send_eoi(vector);
 
     jiffies++;
-/*     if (jiffies % 100 == 0) {
-        start_beep();
-    } */
+    
+    task_t *task = running_task();    
+    assert(task->magic == XJOS_MAGIC);
 
-    stop_beep();
+    task->jiffies = jiffies;
+    task->ticks--;      // time
+    if (!task->ticks) {
+        task->ticks = task->priority;
+        schedule();
+    }
 }
 
 

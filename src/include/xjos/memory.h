@@ -6,6 +6,9 @@
 #define PAGE_SIZE 0x1000        // one page is 4KB
 #define MEMORY_BASE 0x100000     // memory starts at 1M
 
+
+#define KERNEL_PAGE_DIR 0x1000
+
 typedef struct {
     u8 present : 1;             // in memroy or not
     u8 write : 1;               // 0 only read, 1 can write / read
