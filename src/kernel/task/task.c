@@ -6,6 +6,7 @@
 #include <xjos/interrupt.h>
 #include <libc/string.h>
 #include <xjos/bitmap.h>
+#include <xjos/syscall.h>
 
 extern bitmap_t kernel_map;
 extern void task_switch(task_t *next);
@@ -49,6 +50,11 @@ static task_t *task_search(task_state_t state) {
 }
 
 
+void task_yield() {
+    schedule();
+}
+
+
 task_t *running_task() {
     asm volatile(
         "movl %esp, %eax\n"
@@ -57,6 +63,8 @@ task_t *running_task() {
 
 
 void schedule() {
+    assert(!get_interrupt_state());
+
     task_t *current = running_task();
     task_t *next = task_search(TASK_READY);
 
@@ -83,6 +91,7 @@ u32 _ofp thread_a() {
 
     while (true) {
         printk("A");
+        yield();
     }
 }
 
@@ -92,6 +101,7 @@ u32 _ofp thread_b() {
 
     while (true) {
         printk("B");
+        yield();
     }
 }
 
@@ -101,6 +111,7 @@ u32 _ofp thread_c() {
 
     while (true) {
         printk("C");
+        yield();
     }
 }
 

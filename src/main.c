@@ -1,6 +1,5 @@
 extern void interrupt_init();
 extern void clock_init();
-extern void hang();
 extern void time_init();
 extern void rtc_init();
 extern void memory_map_init();
@@ -20,9 +19,8 @@ void kernel_init() {
     clock_init();
     
     task_init();
-    // set_interrupt_state(true);
-
+    
     syscall_init();
-
-    // hang();
+    
+    set_interrupt_state(true);
 }
