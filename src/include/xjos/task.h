@@ -27,7 +27,7 @@ typedef struct {
     u32 priority;            // priority
     u32 ticks;               // ticks to sleep
     u32 jiffies;             // global jiffies
-    u32 name[TASK_NAME_LEN]; // task name
+    char name[TASK_NAME_LEN]; // task name
     u32 uid;                 // user id
     u32 pde;                 // page directory entry
     bitmap_t *vmap;          // process virtual memory bitmap

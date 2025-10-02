@@ -1,5 +1,6 @@
 #include <drivers/console.h>
 #include <hardware/io.h>
+#include <xjos/interrupt.h>
 #include <libc/string.h>
 
 static void get_screen();
@@ -128,12 +129,10 @@ static void srcoll_up() {
         screen += ROW_SIZE;
         pos += ROW_SIZE;
     } else {
-        asm volatile("cli\n");
         pos -= (screen - MEM_BASE);     // ! Concurrency bug 
 
         // copy 2-25 -> 1-24
         // memcpy(MEM_BASE, screen + ROW_SIZE, SCR_SIZE - ROW_SIZE);
-
         u32 *dst = (u32*)MEM_BASE;
         u32 *src = (u32*)(screen + ROW_SIZE);
         for (int i = 0; i < (SCR_SIZE - ROW_SIZE)/4; i++) {
@@ -148,8 +147,6 @@ static void srcoll_up() {
         // pos = mem_base + (y * row_size + x);
         // new pos = pos - offset(screen - mem_base)
         screen = MEM_BASE;
-
-        asm volatile("sti\n");
     }
 
     set_screen();
@@ -160,6 +157,7 @@ extern void start_beep();
  
 
 void console_write(const char *buf, u32 count) {
+    bool state = interrupt_disable();
     char ch;
     while (count--) {
         ch = *buf++;
@@ -202,4 +200,6 @@ void console_write(const char *buf, u32 count) {
     }
 
     set_cursor();
+
+    set_interrupt_state(state);
 }

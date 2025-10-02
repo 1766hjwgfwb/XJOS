@@ -25,6 +25,7 @@ gdt_ptr_t idt_ptr;
 handler_t handler_table[IDT_SIZE];
 
 extern handler_t handler_entry_table[ENTRY_SIZE];
+extern void syscall_handler();
 
 
 static char *messages[] = {
@@ -170,6 +171,18 @@ static void idt_init() {
     for (size_t i = 0x20; i < ENTRY_SIZE; i++) {
         handler_table[i] = default_handler;
     }
+
+    // init syscall
+    gate_t *gate = &idt[0x80];
+    gate->offset0 = (u32)syscall_handler & 0xffff;
+    gate->offset1 = ((u32)syscall_handler >> 16) & 0xffff;
+    gate->selector = 1 << 3;    //code
+    gate->reserved = 0;
+    gate->type = 0b1110;        // interrupt gate
+    gate->segment = 0;
+    gate->DPL = 3;              // user DPL
+    gate->present = 1;
+
 
 
     idt_ptr.base = (u32)idt;

@@ -40,6 +40,9 @@ interrupt_entry:
 
     call [handler_table + eax * 4]
 
+ global interrupt_exit
+ interrupt_exit:   
+
     add esp, 4
 
     popa
@@ -166,3 +169,41 @@ handler_entry_table:
     dd interrupt_handler_0x2d
     dd interrupt_handler_0x2e
     dd interrupt_handler_0x2f
+
+section .text
+
+extern syscall_check
+extern syscall_table
+global syscall_handler
+syscall_handler:
+    xchg bx, bx
+
+    push eax
+    call syscall_check
+    add esp, 4
+
+    push 0x20250901         ; match stack
+
+    push 0x80
+
+    push ds
+    push es
+    push fs
+    push gs
+    pusha
+
+    push 0x80
+    xchg bx, bx
+
+    push edx    ; arg3
+    push ecx    ; arg2
+    push ebx    ; arg1
+
+    call [syscall_table + eax * 4]
+
+    xchg bx, bx
+    add esp, 12     ; system invoke return
+
+    mov dword [esp + 8 * 4], eax
+    
+    jmp interrupt_exit

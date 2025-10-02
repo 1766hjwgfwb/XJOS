@@ -141,7 +141,6 @@ void memory_map_init() {
     bitmap_init(&kernel_map, (u8*)KERNEL_MAP_BITS, length, IDX(MEMORY_BASE));
     bitmap_scan(&kernel_map, memory_map_pages);
 
-    free_kpage(alloc_kpage(1), 1);
 }
 
 

@@ -66,9 +66,13 @@ void schedule() {
     if (current->state == TASK_RUNNING)
         current->state = TASK_READY;
 
+    if (current->ticks <= 0)
+        current->ticks = current->priority;
+    
     next->state = TASK_RUNNING;
     if (next == current)
         return;
+
 
     task_switch(next);
 }
@@ -146,7 +150,7 @@ static void task_setup() {
 void task_init() {
     task_setup();
 
-    task_create(thread_a, "a", 500, KERNEL_USER);
-    task_create(thread_b, "b", 50, KERNEL_USER);
+    task_create(thread_a, "a", 5, KERNEL_USER);
+    task_create(thread_b, "b", 5, KERNEL_USER);
     task_create(thread_c, "c", 5, KERNEL_USER);
 }

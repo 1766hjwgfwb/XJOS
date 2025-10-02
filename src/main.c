@@ -6,6 +6,7 @@ extern void rtc_init();
 extern void memory_map_init();
 extern void mapping_int();
 extern void task_init();
+extern void syscall_init();
 
 #include <xjos/interrupt.h>
 
@@ -19,7 +20,9 @@ void kernel_init() {
     clock_init();
     
     task_init();
-    set_interrupt_state(true);
+    // set_interrupt_state(true);
 
-    hang();
+    syscall_init();
+
+    // hang();
 }

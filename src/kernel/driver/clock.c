@@ -60,8 +60,7 @@ void clock_handler(int vector) {
 
     task->jiffies = jiffies;
     task->ticks--;      // time
-    if (!task->ticks) {
-        task->ticks = task->priority;
+    if (task->ticks <= 0) {
         schedule();
     }
 }
