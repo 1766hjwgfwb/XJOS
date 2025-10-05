@@ -2,6 +2,7 @@
 #include <libc/assert.h>
 #include <xjos/debug.h>
 #include <xjos/syscall.h>
+#include <xjos/task.h>
 
 
 #define LOGK(fmt, args...) DEBUGK(fmt, ##args)
@@ -22,8 +23,17 @@ static void sys_default() {
 }
 
 
+task_t *task = NULL;
 static u32 sys_test() {
-    LOGK("System call test called");
+    if (!task) {
+        task = running_task();
+        // LOGK("block task 0x%p \n", task);
+        task_block(task, NULL, TASK_BLOCKED);
+    } else {
+        task_unblock(task);
+        task = NULL;
+    }
+
     return 255;
 }
 

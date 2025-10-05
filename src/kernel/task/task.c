@@ -7,13 +7,15 @@
 #include <libc/string.h>
 #include <xjos/bitmap.h>
 #include <xjos/syscall.h>
+#include <xjos/list.h>
 
 extern bitmap_t kernel_map;
 extern void task_switch(task_t *next);
 
 #define NR_TASKS 64
-static task_t *tasks_table[NR_TASKS];
-
+static task_t *tasks_table[NR_TASKS];   // task table
+static list_t block_list;               // blocked task list
+static task_t *idle_task;
 
 static task_t *get_free_task() {
     for (int i = 0; i < NR_TASKS; i++) {
@@ -46,12 +48,47 @@ static task_t *task_search(task_state_t state) {
             task = ptr;
     }
 
+    if (task == NULL && state == TASK_READY)
+        task = idle_task;
+
     return task;
 }
 
 
 void task_yield() {
     schedule();
+}
+
+
+// task stoppage
+void task_block(task_t *task, list_t *blist, task_state_t state) {
+    assert(!get_interrupt_state());
+    assert(task->node.next == NULL);
+    assert(task->node.prev == NULL);
+
+    if (blist == NULL)
+        blist = &block_list;
+
+    list_push(blist, &task->node);
+    
+    assert(state != TASK_READY && state != TASK_RUNNING);
+    task->state = state;
+
+    task_t *current = running_task();
+    if (current == task)
+        schedule();
+}
+
+
+void task_unblock(task_t *task) {
+    assert(!get_interrupt_state());
+
+    list_remove(&task->node);
+
+    assert(task->node.next == NULL);
+    assert(task->node.prev == NULL);
+
+    task->state = TASK_READY;
 }
 
 
@@ -83,36 +120,6 @@ void schedule() {
 
 
     task_switch(next);
-}
-
-
-u32 _ofp thread_a() {
-    set_interrupt_state(true);
-
-    while (true) {
-        printk("A");
-        yield();
-    }
-}
-
-
-u32 _ofp thread_b() {
-    set_interrupt_state(true);
-
-    while (true) {
-        printk("B");
-        yield();
-    }
-}
-
-
-u32 _ofp thread_c() {
-    set_interrupt_state(true);
-
-    while (true) {
-        printk("C");
-        yield();
-    }
 }
 
 
@@ -158,10 +165,13 @@ static void task_setup() {
 }
 
 
+extern void idle_thread();
+extern void init_thread();
+
 void task_init() {
+    list_init(&block_list);
     task_setup();
 
-    task_create(thread_a, "a", 5, KERNEL_USER);
-    task_create(thread_b, "b", 5, KERNEL_USER);
-    task_create(thread_c, "c", 5, KERNEL_USER);
+    idle_task = task_create(idle_thread, "idle", 1, KERNEL_USER);
+    task_create(init_thread, "init", 5, KERNEL_USER);
 }

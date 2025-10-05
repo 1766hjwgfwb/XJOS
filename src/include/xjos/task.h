@@ -3,6 +3,7 @@
 
 #include <xjos/types.h>
 #include <xjos/bitmap.h>
+#include <xjos/list.h>
 
 #define KERNEL_USER 0
 #define NORMAL_USER 1
@@ -23,6 +24,7 @@ typedef enum {
 
 typedef struct {
     u32 *stack;              // kernel stack
+    list_node_t node;        // task postpage node
     task_state_t state;      // state   
     u32 priority;            // priority
     u32 ticks;               // ticks to sleep
@@ -48,6 +50,8 @@ task_t *running_task();
 void schedule();
 
 void task_yield();
+void task_block(task_t *task, list_t *blist, task_state_t state);
+void task_unblock(task_t *task);
 
 
 #endif /* _XJOS_TASK_H_ */
