@@ -9,13 +9,75 @@
 #include <xjos/syscall.h>
 #include <xjos/list.h>
 
+#define NR_TASKS 64
+
+extern u32 volatile jiffies;
+extern u32 jiffy;
 extern bitmap_t kernel_map;
 extern void task_switch(task_t *next);
 
-#define NR_TASKS 64
 static task_t *tasks_table[NR_TASKS];   // task table
 static list_t block_list;               // blocked task list
-static task_t *idle_task;
+static task_t *idle_task;               // idle
+static list_t sleep_list;               // sleep list
+
+
+void task_sleep(u32 ms) {
+    assert(!get_interrupt_state());
+
+    u32 ticks = ms / jiffy;             // jiffy 10ms
+    ticks = ticks > 0 ? ticks : 1;      // at least 1 jiffy
+
+    task_t *current = running_task();
+    current->ticks = jiffies + ticks;   // need time to wakeup
+    
+    assert(current->node.next == NULL);
+    assert(current->node.prev == NULL);
+
+    // task insert sleep list
+    bool inserted = false;
+    task_t *task_curosr = NULL;
+
+
+    list_for_each_entry(task_curosr, &sleep_list, node) {
+        // find the first task with ticks > current->ticks
+        if (task_curosr->ticks > current->ticks) {
+            list_insert_before(&task_curosr->node, &current->node);
+            inserted = true;
+            break;
+        }
+    }
+
+    // if not inserted, pushback to sleep list
+    if (!inserted)
+        list_pushback(&sleep_list, &current->node);
+    
+    current->state = TASK_SLEEPING;
+    schedule();
+}
+
+
+void task_wakeup() {
+    assert(!get_interrupt_state());
+    
+    list_node_t *ptr = sleep_list.head.next;
+    list_node_t *next;
+
+    while (ptr != &sleep_list.head) {
+        next = ptr->next;
+
+        task_t *task = element_entry(task_t, node, ptr);
+        if (task->ticks > jiffies)      // timestamp
+            break;
+
+        // ticks <= jiffies
+        task->ticks = 0;
+        task_unblock(task);
+
+        ptr = next;
+    }
+}
+
 
 static task_t *get_free_task() {
     for (int i = 0; i < NR_TASKS; i++) {
@@ -167,11 +229,14 @@ static void task_setup() {
 
 extern void idle_thread();
 extern void init_thread();
+extern void test_thread();
 
 void task_init() {
     list_init(&block_list);
+    list_init(&sleep_list);
     task_setup();
 
     idle_task = task_create(idle_thread, "idle", 1, KERNEL_USER);
     task_create(init_thread, "init", 5, KERNEL_USER);
+    task_create(test_thread, "test", 5, KERNEL_USER);
 }

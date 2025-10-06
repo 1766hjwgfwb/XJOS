@@ -47,11 +47,13 @@ void stop_beep() {
     }
 }
 
+extern void task_wakeup();
 
 void clock_handler(int vector) {
     assert(vector == 0x20);
 
     send_eoi(vector);
+    task_wakeup();
 
     jiffies++;
     
