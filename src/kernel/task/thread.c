@@ -29,7 +29,7 @@ void init_thread() {
     while (true) {
         mutex_lock(&mutex);
         LOGK("init task... %d\n", count++);
-        sleep(10);
+        sleep(1000);
         mutex_unlock(&mutex);
     }
 }
@@ -41,7 +41,7 @@ void test_thread() {
     while (true) {
         mutex_lock(&mutex);
         LOGK("Test thread running %d\n", count++);
-        sleep(10);
+        sleep(1000);
         mutex_unlock(&mutex);
     }
 }

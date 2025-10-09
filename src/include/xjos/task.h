@@ -27,6 +27,7 @@ typedef struct {
     list_node_t node;        // task postpage node
     task_state_t state;      // state   
     u32 priority;            // priority
+    u32 base_priority;       // base priority
     u32 ticks;               // ticks to sleep
     u32 jiffies;             // global jiffies
     u32 age;                 // age
@@ -56,6 +57,7 @@ void task_unblock(task_t *task);
 
 void task_sleep(u32 ms);
 void task_wakeup();
+void task_aging();
 
 
 #endif /* _XJOS_TASK_H_ */

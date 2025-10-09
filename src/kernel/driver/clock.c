@@ -47,15 +47,17 @@ void stop_beep() {
     }
 }
 
-extern void task_wakeup();
 
 void clock_handler(int vector) {
     assert(vector == 0x20);
-
     send_eoi(vector);
-    task_wakeup();
 
     jiffies++;
+
+    task_wakeup();
+
+    // task_aging();
+
     
     task_t *task = running_task();    
     assert(task->magic == XJOS_MAGIC);

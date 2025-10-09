@@ -12,8 +12,9 @@
 
 #define LOGK(fmt, args...) DEBUGK(fmt, ##args)
 
-#define NR_TASKS 64
-#define MAX_PRIORITY 32
+#define NR_TASKS (64)
+#define MAX_PRIORITY (32)
+#define AGING_TIME (100)
 
 extern u32 volatile jiffies;
 extern u32 jiffy;
@@ -109,15 +110,14 @@ void task_yield() {
 // task stoppage
 void task_block(task_t *task, list_t *blist, task_state_t state) {
     assert(!get_interrupt_state());
-    assert(task->node.next == NULL);
-    assert(task->node.prev == NULL);
+    assert(task->node.next == NULL && task->node.prev == NULL);
+    assert(state != TASK_READY && state != TASK_RUNNING);
 
     if (blist == NULL)
         blist = &block_list;
 
     list_push(blist, &task->node);
     
-    assert(state != TASK_READY && state != TASK_RUNNING);
     task->state = state;
 
     task_t *current = running_task();
@@ -131,8 +131,7 @@ void task_unblock(task_t *task) {
 
     list_remove(&task->node);
 
-    assert(task->node.next == NULL);
-    assert(task->node.prev == NULL);
+    assert(task->node.next == NULL && task->node.prev == NULL);
 
     task->state = TASK_READY;
 
@@ -149,66 +148,67 @@ task_t *running_task() {
 }
 
 
-static int find_highest_priority() {
-    for (int i = MAX_PRIORITY - 1; i >= 0; i--) {
-        if (bitmap_test(&ready_bitmap, i))
-            return i;
-    }
-    return -1;      // not ready task
-}
-
-
 void schedule() {
     assert(!get_interrupt_state());
 
     task_t *current = running_task();
     task_t *next = NULL;
 
-    // judge current task to ready queeus
+    // Step 1: Put the current task (if it was running) back into the ready queue.
     if (current->state == TASK_RUNNING && current != idle_task) {
-        assert(current->priority < MAX_PRIORITY);
         current->state = TASK_READY;
-        list_pushback(&ready_queues[current->priority], &current->node);
-        bitmap_set(&ready_bitmap, current->priority, true);
-    }
-
-    // find next task from ready list
-    int highest_prio = find_highest_priority();
-    if (highest_prio != -1) {
-        list_t *queue = &ready_queues[highest_prio];
-
-        next = list_entry(list_pop(queue), task_t, node);
-        if (list_empty(queue))
-            bitmap_set(&ready_bitmap, highest_prio, false);
-    } else {
-        next = idle_task;
+        current->age = 0; // Reset age after running.
+        // **Always put back to the base priority queue**
+        list_pushback(&ready_queues[current->base_priority], &current->node);
+        bitmap_set(&ready_bitmap, current->base_priority, true);
     }
     
+    // Step 2: Find the next task, performing aging calculation at the same time.
+    task_t *candidate = NULL;
+    int max_score = -1;
 
-
-    /* // O(1), next task from ready list
-    if (!list_empty(&ready_list)) {
-        next = list_entry(list_pop(&ready_list), task_t, node);
-    } else {
-        next = idle_task;
-    } */
-
-    assert(next!= NULL);
-    assert(next->magic == XJOS_MAGIC);
-
-    // ! bug
-    /* if (current->state == TASK_RUNNING) {
-        current->state = TASK_READY;
-        list_pushback(&ready_list, &current->node);
-    } */
-
-    if (current->ticks <= 0)
-        current->ticks = current->priority;
-    
-    if (next == current)
-        return;
+    // Iterate through all ready tasks to find the one with the highest "score". O(N)
+    for (int i = 0; i < MAX_PRIORITY; i++) {
+        if (list_empty(&ready_queues[i])) 
+            continue;
         
+        list_node_t *ptr = ready_queues[i].head.next;
+        while (ptr != &ready_queues[i].head) {
+            task_t *task = list_entry(ptr, task_t, node);
+            
+            // **Increase the age for each waiting task (except for the 'current' one)**
+            if (task != current) {
+                task->age += 1;
+            }
+            
+            // Calculate score = base priority + age weight.
+            // AGING_TIME determines how much age equals one priority level.
+            int score = task->base_priority + (task->age / AGING_TIME);
+            
+            if (score > max_score) {
+                max_score = score;
+                candidate = task;
+            }
+            ptr = ptr->next;
+        }
+    }
+
+    // Step 3: Select the final candidate and pop it from its queue.
+    if (candidate) {
+        next = candidate;
+        // **Only at this moment, do we perform the Pop (list_remove) operation**
+        list_remove(&next->node); 
+        if (list_empty(&ready_queues[next->base_priority])) {
+            bitmap_set(&ready_bitmap, next->base_priority, false);
+        }
+    } else {
+        next = idle_task;
+    }
+
+    // Step 4: Switch to the next task.
+    assert(next != NULL);
     next->state = TASK_RUNNING;
+    next->ticks = next->base_priority; // Timeslice is always based on the base priority.
     task_switch(next);
 }
 
@@ -234,6 +234,7 @@ static task_t *task_create(target_t target, const char *name, u32 priority, u32 
 
     task->stack = (u32 *)stack;
     task->priority = priority;
+    task->base_priority = priority;
     task->ticks = task->priority;      
     task->jiffies = 0;
     task->state = TASK_READY;
@@ -272,12 +273,12 @@ void task_init() {
     list_init(&sleep_list);
     task_setup();
 
+    bitmap_init(&ready_bitmap, (char *)ready_bitmap_bits, MAX_PRIORITY, 0);
+
     for (int i = 0; i < MAX_PRIORITY; i++)
         list_init(&ready_queues[i]);
 
-    bitmap_init(&ready_bitmap, (char *)ready_bitmap_bits, MAX_PRIORITY, 0);
-
     idle_task = task_create(idle_thread, "idle", 1, KERNEL_USER);
     task_create(init_thread, "init", 5, KERNEL_USER);
-    task_create(test_thread, "test", 5, KERNEL_USER);
+    task_create(test_thread, "test", 3, KERNEL_USER);
 }
