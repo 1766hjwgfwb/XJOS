@@ -8,9 +8,9 @@ section .text
 ; 0 intel event / 1 outside event
 %macro INTERRUPT_HANDLER 2  ; 2args
 interrupt_handler_%1:       ; x_0x..
-%ifn %2                     ; check second arg (0 or 1)
-    push 0x20222202         ; virutal interrupt flag
-%endif
+    %if %2 == 0                     ; check second arg (0 or 1)
+        push 0
+    %endif
     push %1                 ; 1
     jmp interrupt_entry
 %endmacro

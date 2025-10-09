@@ -240,6 +240,7 @@ static task_t *task_create(target_t target, const char *name, u32 priority, u32 
     task->uid = uid;
     task->vmap = &kernel_map;
     task->pde = KERNEL_PAGE_DIR;
+    task->age = 0;
     task->magic = XJOS_MAGIC;       // canary 
 
     if (strcmp(task->name, "idle") != 0) {
