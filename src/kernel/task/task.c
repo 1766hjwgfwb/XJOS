@@ -8,8 +8,12 @@
 #include <xjos/bitmap.h>
 #include <xjos/syscall.h>
 #include <xjos/list.h>
+#include <libc/string.h>
+
+#define LOGK(fmt, args...) DEBUGK(fmt, ##args)
 
 #define NR_TASKS 64
+#define MAX_PRIORITY 32
 
 extern u32 volatile jiffies;
 extern u32 jiffy;
@@ -17,9 +21,15 @@ extern bitmap_t kernel_map;
 extern void task_switch(task_t *next);
 
 static task_t *tasks_table[NR_TASKS];   // task table
-static list_t block_list;               // blocked task list
 static task_t *idle_task;               // idle
+
+static list_t block_list;               // blocked task list
 static list_t sleep_list;               // sleep list
+
+// ready list
+static list_t ready_queues[MAX_PRIORITY];
+static bitmap_t ready_bitmap;
+static u8 ready_bitmap_bits[MAX_PRIORITY / 8];
 
 
 void task_sleep(u32 ms) {
@@ -91,32 +101,6 @@ static task_t *get_free_task() {
 }
 
 
-static task_t *task_search(task_state_t state) {
-    assert(!get_interrupt_state());
-    task_t *task = NULL;
-    task_t *current = running_task();
-
-    for (size_t i = 0; i < NR_TASKS; i++) {
-        task_t *ptr = tasks_table[i];
-
-        if (ptr == NULL)
-            continue;
-        
-        if (ptr->state != state)
-            continue;
-        if (current == ptr)
-            continue;
-        if (task == NULL || task->ticks < ptr->ticks || ptr->jiffies < task->jiffies)
-            task = ptr;
-    }
-
-    if (task == NULL && state == TASK_READY)
-        task = idle_task;
-
-    return task;
-}
-
-
 void task_yield() {
     schedule();
 }
@@ -151,6 +135,10 @@ void task_unblock(task_t *task) {
     assert(task->node.prev == NULL);
 
     task->state = TASK_READY;
+
+    assert(task->priority < MAX_PRIORITY);
+    list_pushback(&ready_queues[task->priority], &task->node);
+    bitmap_set(&ready_bitmap, task->priority, true);
 }
 
 
@@ -161,26 +149,66 @@ task_t *running_task() {
 }
 
 
+static int find_highest_priority() {
+    for (int i = MAX_PRIORITY - 1; i >= 0; i--) {
+        if (bitmap_test(&ready_bitmap, i))
+            return i;
+    }
+    return -1;      // not ready task
+}
+
+
 void schedule() {
     assert(!get_interrupt_state());
 
     task_t *current = running_task();
-    task_t *next = task_search(TASK_READY);
+    task_t *next = NULL;
+
+    // judge current task to ready queeus
+    if (current->state == TASK_RUNNING && current != idle_task) {
+        assert(current->priority < MAX_PRIORITY);
+        current->state = TASK_READY;
+        list_pushback(&ready_queues[current->priority], &current->node);
+        bitmap_set(&ready_bitmap, current->priority, true);
+    }
+
+    // find next task from ready list
+    int highest_prio = find_highest_priority();
+    if (highest_prio != -1) {
+        list_t *queue = &ready_queues[highest_prio];
+
+        next = list_entry(list_pop(queue), task_t, node);
+        if (list_empty(queue))
+            bitmap_set(&ready_bitmap, highest_prio, false);
+    } else {
+        next = idle_task;
+    }
+    
+
+
+    /* // O(1), next task from ready list
+    if (!list_empty(&ready_list)) {
+        next = list_entry(list_pop(&ready_list), task_t, node);
+    } else {
+        next = idle_task;
+    } */
 
     assert(next!= NULL);
     assert(next->magic == XJOS_MAGIC);
 
-    if (current->state == TASK_RUNNING)
+    // ! bug
+    /* if (current->state == TASK_RUNNING) {
         current->state = TASK_READY;
+        list_pushback(&ready_list, &current->node);
+    } */
 
     if (current->ticks <= 0)
         current->ticks = current->priority;
     
-    next->state = TASK_RUNNING;
     if (next == current)
         return;
-
-
+        
+    next->state = TASK_RUNNING;
     task_switch(next);
 }
 
@@ -214,6 +242,13 @@ static task_t *task_create(target_t target, const char *name, u32 priority, u32 
     task->pde = KERNEL_PAGE_DIR;
     task->magic = XJOS_MAGIC;       // canary 
 
+    if (strcmp(task->name, "idle") != 0) {
+        assert(task->priority < MAX_PRIORITY);
+        list_pushback(&ready_queues[task->priority], &task->node);
+
+        bitmap_set(&ready_bitmap, task->priority, true);
+    }
+
     return task;
 }
 
@@ -235,6 +270,11 @@ void task_init() {
     list_init(&block_list);
     list_init(&sleep_list);
     task_setup();
+
+    for (int i = 0; i < MAX_PRIORITY; i++)
+        list_init(&ready_queues[i]);
+
+    bitmap_init(&ready_bitmap, (char *)ready_bitmap_bits, MAX_PRIORITY, 0);
 
     idle_task = task_create(idle_thread, "idle", 1, KERNEL_USER);
     task_create(init_thread, "init", 5, KERNEL_USER);

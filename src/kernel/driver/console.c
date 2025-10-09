@@ -157,7 +157,6 @@ extern void start_beep();
  
 
 void console_write(const char *buf, u32 count) {
-    bool state = interrupt_disable();
     char ch;
     while (count--) {
         ch = *buf++;
@@ -200,6 +199,4 @@ void console_write(const char *buf, u32 count) {
     }
 
     set_cursor();
-
-    set_interrupt_state(state);
 }
