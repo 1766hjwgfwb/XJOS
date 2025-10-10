@@ -57,7 +57,6 @@ void task_unblock(task_t *task);
 
 void task_sleep(u32 ms);
 void task_wakeup();
-void task_aging();
 
 
 #endif /* _XJOS_TASK_H_ */

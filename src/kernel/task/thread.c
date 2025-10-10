@@ -2,6 +2,7 @@
 #include <xjos/syscall.h>
 #include <xjos/debug.h>
 #include <xjos/mutex.h>
+#include <xjos/spinlock.h>
 
 #define LOGK(fmt, args...) DEBUGK(fmt, ##args)
 
@@ -17,19 +18,19 @@ void idle_thread() {
     }
 }
 
-semaphore_t sem;
+spinlock_t spin;
 
 void init_thread() {
     set_interrupt_state(true);
     u32 count = 0;
 
-    sem_init(&sem);
+    spin_init(&spin, "spinlock");
 
     while (true) {
-        sem_wait(&sem);
+        spin_lock(&spin);
         LOGK("init task... %d\n", count++);
+        spin_unlock(&spin);
         // sleep(10);
-        sem_post(&sem);
     }
 }
 
@@ -38,9 +39,9 @@ void test_thread() {
     set_interrupt_state(true);
     u32 count = 0;
     while (true) {
-        sem_wait(&sem);
+        spin_lock(&spin);
         LOGK("Test thread running %d\n", count++);
+        spin_unlock(&spin);
         // sleep(10);
-        sem_post(&sem);
     }
 }

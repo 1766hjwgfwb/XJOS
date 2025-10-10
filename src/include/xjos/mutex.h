@@ -5,7 +5,7 @@
 #include <xjos/list.h>
 
 /*
-    sem
+    mutex signal
 */
 
 typedef struct {
@@ -21,6 +21,21 @@ void sem_post(semaphore_t *sem);    // V
 /*
     mutex
 */
+
+typedef struct {
+    struct task_t *holder;
+    semaphore_t sem;
+    u32 repeat;                     // ref count
+}mutex_t;
+
+void mutex_init(mutex_t *lock);
+void mutex_lock(mutex_t *lock);
+void mutex_unlock(mutex_t *lock);
+
+/*
+    spinlock
+*/
+
 
 
 #endif /* XJOS_MUTEX_H */
