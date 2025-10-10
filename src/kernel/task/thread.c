@@ -17,20 +17,19 @@ void idle_thread() {
     }
 }
 
-mutex_t mutex;
-
+semaphore_t sem;
 
 void init_thread() {
     set_interrupt_state(true);
     u32 count = 0;
 
-    mutex_init(&mutex);
+    sem_init(&sem);
 
     while (true) {
-        mutex_lock(&mutex);
+        sem_wait(&sem);
         LOGK("init task... %d\n", count++);
-        sleep(1000);
-        mutex_unlock(&mutex);
+        // sleep(10);
+        sem_post(&sem);
     }
 }
 
@@ -39,9 +38,9 @@ void test_thread() {
     set_interrupt_state(true);
     u32 count = 0;
     while (true) {
-        mutex_lock(&mutex);
+        sem_wait(&sem);
         LOGK("Test thread running %d\n", count++);
-        sleep(1000);
-        mutex_unlock(&mutex);
+        // sleep(10);
+        sem_post(&sem);
     }
 }

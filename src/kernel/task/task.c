@@ -271,12 +271,14 @@ extern void test_thread();
 void task_init() {
     list_init(&block_list);
     list_init(&sleep_list);
+    
+    for (int i = 0; i < MAX_PRIORITY; i++)
+        list_init(&ready_queues[i]);
+
     task_setup();
 
     bitmap_init(&ready_bitmap, (char *)ready_bitmap_bits, MAX_PRIORITY, 0);
 
-    for (int i = 0; i < MAX_PRIORITY; i++)
-        list_init(&ready_queues[i]);
 
     idle_task = task_create(idle_thread, "idle", 1, KERNEL_USER);
     task_create(init_thread, "init", 5, KERNEL_USER);

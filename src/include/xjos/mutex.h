@@ -4,16 +4,23 @@
 #include <xjos/types.h>
 #include <xjos/list.h>
 
+/*
+    sem
+*/
+
 typedef struct {
-    bool value;
+    int8 value;
     list_t waiters; // wait queue
-}mutex_t;
+}semaphore_t;
 
 
-void mutex_init(mutex_t *mutex);
-void mutex_lock(mutex_t *mutex);
-void mutex_unlock(mutex_t *mutex);
+void sem_init(semaphore_t *sem);
+void sem_wait(semaphore_t *sem);    // P
+void sem_post(semaphore_t *sem);    // V
 
+/*
+    mutex
+*/
 
 
 #endif /* XJOS_MUTEX_H */
