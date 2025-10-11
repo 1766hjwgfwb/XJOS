@@ -9,6 +9,19 @@
 
 void gdt_init();
 
+#define KERNEL_CODE_IDX 1
+#define KERNEL_DATA_IDX 2
+#define KERNEL_TSS_IDX 3
+
+#define USER_CODE_IDX 4
+#define USER_DATA_IDX 5
+
+#define KERNEL_CODE_SELECTOR (KERNEL_CODE_IDX << 3)
+#define KERNEL_DATA_SELECTOR (KERNEL_DATA_IDX << 3)
+#define KERNEL_TSS_SELECTOR (KERNEL_TSS_IDX << 3)
+
+#define USER_CODE_SELECTOR (USER_CODE_IDX << 3 | 0b11) // set DPL user
+#define USER_DATA_SELECTOR (USER_DATA_IDX << 3 | 0b11)
 
 // Global Descriptor Table (GDT)
 typedef struct descriptor_struct {
@@ -41,6 +54,39 @@ typedef struct {
     u32 base;
 }_packed gdt_ptr_t;
 
+
+typedef struct tss_t
+{
+    u32 backlink;      // Previous task link (TSS selector)
+    u32 esp0;          // Ring 0 stack pointer
+    u32 ss0;           // Ring 0 stack segment selector
+    u32 esp1;          // Ring 1 stack pointer
+    u32 ss1;           // Ring 1 stack segment selector
+    u32 esp2;          // Ring 2 stack pointer
+    u32 ss2;           // Ring 2 stack segment selector
+    u32 cr3;
+    u32 eip;
+    u32 flags;
+    u32 eax;
+    u32 ecx;
+    u32 edx;
+    u32 ebx;
+    u32 esp;
+    u32 ebp;
+    u32 esi;
+    u32 edi;
+    u32 es;
+    u32 cs;
+    u32 ss;
+    u32 ds;
+    u32 fs;
+    u32 gs;
+    u32 ldtr;          // Local LDT segment selector
+    u16 trace : 1;     // If set, triggers a debug exception on task switch
+    u16 reserved : 15; // Reserved for future use
+    u16 iobase;        // I/O map base address (offset from TSS)
+    u32 ssp;           // Shadow stack pointer
+} _packed tss_t;
 
 
 #endif /* XJOS_GLOBAL_H */
