@@ -11,6 +11,7 @@ typedef struct {
     // debugging
     const char *name;
     int holder_cpu;
+    bool intr_state;
 }spinlock_t;
 
 

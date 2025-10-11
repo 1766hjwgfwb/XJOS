@@ -6,17 +6,16 @@ extern void memory_map_init();
 extern void mapping_int();
 extern void task_init();
 extern void syscall_init();
+extern void keyboard_init();
 
 #include <xjos/interrupt.h>
-#include <xjos/debug.h>
-
-#define LOGK(fmt, args...) DEBUGK(fmt, ##args)
 
 void kernel_init() {
     memory_map_init();
     mapping_int();
     interrupt_init();
     clock_init();
+    keyboard_init();
 
     task_init();
     syscall_init();

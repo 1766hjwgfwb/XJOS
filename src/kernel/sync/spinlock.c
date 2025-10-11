@@ -2,12 +2,12 @@
 #include <xjos/interrupt.h>
 #include <libc/assert.h>
 
-static bool intr;
 
 void spin_init(spinlock_t *lock, const char *name) {
     lock->locked = 0;
     lock->name = name;
     lock->holder_cpu = -1;
+    lock->intr_state = true;
 }
 
 
@@ -18,7 +18,7 @@ void spin_init(spinlock_t *lock, const char *name) {
  * 3. wait until lock get success
 */
 void spin_lock(spinlock_t *lock) {
-    intr = interrupt_disable();
+    lock->intr_state = interrupt_disable();
 
     assert(lock->holder_cpu != 0);
 
@@ -45,5 +45,5 @@ void spin_unlock(spinlock_t *lock) {
 
     __sync_lock_release(&lock->locked);
 
-    set_interrupt_state(intr);
+    set_interrupt_state(lock->intr_state);
 }

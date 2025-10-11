@@ -3,6 +3,7 @@
 
 #include <xjos/types.h>
 #include <xjos/list.h>
+#include <xjos/task.h>
 
 /*
     mutex signal
@@ -23,7 +24,7 @@ void sem_post(semaphore_t *sem);    // V
 */
 
 typedef struct {
-    struct task_t *holder;
+    task_t *holder;
     semaphore_t sem;
     u32 repeat;                     // ref count
 }mutex_t;
@@ -31,10 +32,6 @@ typedef struct {
 void mutex_init(mutex_t *lock);
 void mutex_lock(mutex_t *lock);
 void mutex_unlock(mutex_t *lock);
-
-/*
-    spinlock
-*/
 
 
 
