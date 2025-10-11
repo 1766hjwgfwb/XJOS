@@ -2,6 +2,9 @@
 #include <hardware/io.h>
 #include <libc/assert.h>
 #include <xjos/debug.h>
+#include <xjos/spinlock.h>
+#include <xjos/task.h>
+#include <xjos/fifo.h>
 
 #define LOGK(fmt, args...) DEBUGK(fmt, ##args)
 
@@ -14,6 +17,14 @@
 
 #define KEYBOARD_CMD_LED 0xED // set LED status
 #define KEYBOARD_CMD_ACK 0xFA // ACK
+
+static spinlock_t lock;
+static task_t *waiter;  // wait task
+
+#define BUFFER_SIZE 64
+static char buffer[BUFFER_SIZE];
+static fifo_t fifo;
+
 
 typedef enum {
     KEY_NONE = 0,
@@ -316,7 +327,7 @@ void keyboard_handler(int vector) {
     // check shift
     bool shift = shift_state;
 
-    if (capslock_state && 'a' <= keymap[makecode][0] <= 'z') {
+    if (capslock_state && (keymap[makecode][0] >= 'a' && keymap[makecode][0] <= 'z')) {
         shift = !shift;
     }
 
@@ -330,7 +341,26 @@ void keyboard_handler(int vector) {
     if (ch == INV)
         return;
 
-    LOGK("keydown %c\n", ch);
+    fifo_put(&fifo, ch);
+    if (waiter != NULL) {
+        task_unblock(waiter);
+        waiter = NULL;
+    }
+}
+
+
+u32 keyboard_read(char *buffer, u32 count) {
+    spin_lock(&lock);   // spin lock
+    int nr = 0;
+    while (nr < count) {
+        while (fifo_empty(&fifo)) {
+            waiter = running_task();
+            task_block(waiter, NULL, TASK_WAITING);
+        }
+        buffer[nr++] = fifo_get(&fifo);
+    }
+    spin_unlock(&lock); // spin unlock
+    return count;
 }
 
 
@@ -339,6 +369,12 @@ void keyboard_init() {
     scrlook_state = false;
     capslock_state = false;
     extcode_state = false;
+
+    fifo_init(&fifo, buffer, BUFFER_SIZE);
+    spin_init(&lock, "keyboard");
+    waiter = NULL;
+    
+    set_leds();
 
     set_interrupt_handler(IRQ_KEYBOARD, keyboard_handler);
     set_interrupt_mask(IRQ_KEYBOARD, true);
