@@ -9,6 +9,7 @@
 #include <xjos/syscall.h>
 #include <xjos/list.h>
 #include <libc/string.h>
+#include <xjos/global.h>
 
 #define LOGK(fmt, args...) DEBUGK(fmt, ##args)
 
@@ -20,6 +21,7 @@ extern u32 volatile jiffies;
 extern u32 jiffy;
 extern bitmap_t kernel_map;
 extern void task_switch(task_t *next);
+extern tss_t tss;
 
 static task_t *tasks_table[NR_TASKS];   // task table
 static task_t *idle_task;               // idle
@@ -141,6 +143,14 @@ void task_unblock(task_t *task) {
 }
 
 
+void task_activate(task_t *task) {
+    assert(task->magic == XJOS_MAGIC);
+
+    if (task->uid != KERNEL_USER)
+        tss.esp0 = (u32)task + PAGE_SIZE;
+}
+
+
 task_t *running_task() {
     asm volatile(
         "movl %esp, %eax\n"
@@ -209,6 +219,8 @@ void schedule() {
     assert(next != NULL);
     next->state = TASK_RUNNING;
     next->ticks = next->base_priority; // Timeslice is always based on the base priority.
+
+    task_activate(next);
     task_switch(next);
 }
 
@@ -232,7 +244,7 @@ static task_t *task_create(target_t target, const char *name, u32 priority, u32 
     assert(strlen(name) < 16);
     strcpy((char*)task->name, name);
 
-    task->stack = (u32 *)stack;
+    task->stack = (u32 *)stack;         // esp pointer
     task->priority = priority;
     task->base_priority = priority;
     task->ticks = task->priority;      
@@ -252,6 +264,47 @@ static task_t *task_create(target_t target, const char *name, u32 priority, u32 
     }
 
     return task;
+}
+
+
+void task_to_user_mode(target_t target) {
+    task_t *task = running_task();
+
+    u32 addr = (u32)task + PAGE_SIZE;
+    addr -= sizeof(intr_frame_t);
+    intr_frame_t *iframe = (intr_frame_t *)addr;
+
+    iframe->vector = 0x20;
+    iframe->edi = 1;
+    iframe->esi = 2;
+    iframe->ebp = 3;
+    iframe->esp_dummy = 4;
+    iframe->ebx = 5;
+    iframe->edx = 6;
+    iframe->ecx = 7;
+    iframe->eax = 8;
+
+    iframe->gs = 0;
+    iframe->ds = USER_DATA_SELECTOR;
+    iframe->es = USER_DATA_SELECTOR;
+    iframe->fs = USER_DATA_SELECTOR;
+    iframe->ss = USER_DATA_SELECTOR;
+    iframe->cs = USER_CODE_SELECTOR;
+
+    iframe->error = XJOS_MAGIC;
+
+    // alloc user stack
+    u32 stack3 = alloc_kpage(1);
+
+    iframe->eip = (u32)target;
+    iframe->eflags = (0 << 12 | 0b10 | 1 << 9);
+    iframe->esp = stack3 + PAGE_SIZE;
+
+    // esp -> iframe
+    asm volatile (
+        "movl %0, %%esp\n"
+        "jmp interrupt_exit\n" ::"m"(iframe)
+    );
 }
 
 
@@ -281,6 +334,6 @@ void task_init() {
 
 
     idle_task = task_create(idle_thread, "idle", 1, KERNEL_USER);
-    task_create(init_thread, "init", 5, KERNEL_USER);
+    task_create(init_thread, "init", 5, NORMAL_USER);
     task_create(test_thread, "test", 3, KERNEL_USER);
 }

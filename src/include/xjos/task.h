@@ -46,6 +46,35 @@ typedef struct {
     void (*eip)(void);
 }task_frame_t;
 
+// interrupt frame
+typedef struct {
+    u32 vector;
+
+    u32 edi;
+    u32 esi;
+    u32 ebp;
+    u32 esp_dummy;      // not used
+
+    u32 ebx;
+    u32 edx;
+    u32 ecx;
+    u32 eax;
+
+    u32 gs;
+    u32 fs;
+    u32 es;
+    u32 ds;
+
+    u32 vector0;
+    u32 error;
+
+    u32 eip;
+    u32 cs;
+    u32 eflags;
+    u32 esp;
+    u32 ss;
+}intr_frame_t;
+
 
 void task_init();
 task_t *running_task();
@@ -57,6 +86,8 @@ void task_unblock(task_t *task);
 
 void task_sleep(u32 ms);
 void task_wakeup();
+
+void task_to_user_mode(target_t target);
 
 
 #endif /* _XJOS_TASK_H_ */

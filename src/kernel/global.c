@@ -46,10 +46,8 @@ void gdt_init() {
     desc->DPL = 3;
     desc->type = 0b0010;    // data / up / Writable / Not Accessed
 
-    BMB;
     gdt_ptr.base = (u32)&gdt;
     gdt_ptr.limit = sizeof(gdt) - 1;
-    BMB;
 
     asm volatile("lgdt gdt_ptr");
 }
