@@ -3,7 +3,7 @@
 #include <xjos/debug.h>
 #include <xjos/mutex.h>
 #include <xjos/spinlock.h>
-#include <xjos/printk.h>
+#include <libc/stdio.h>
 
 #define LOGK(fmt, args...) DEBUGK(fmt, ##args)
 
@@ -21,8 +21,11 @@ void idle_thread() {
 
 
 static void real_init_thread() {
+    u32 counter = 0;
     while (true) {
-        asm volatile ("in $0x92, %ax\n");
+        BMB;
+        printf("task is in user mode: %d\n", counter++);
+        sleep(1000);
     }
 }
 
@@ -30,6 +33,11 @@ static void real_init_thread() {
 void init_thread() {
     char temp[100];
     task_to_user_mode(real_init_thread);
+    /* set_interrupt_state(true);
+    u32 count = 0;
+    while (true) {
+        // printf("init thread: %d\n", count++);
+    } */
 }
 
 
@@ -37,6 +45,7 @@ void test_thread() {
     set_interrupt_state(true);
     u32 count = 0;
     while (true) {
+        // printf("test thread: %d\n", count++);
         sleep(500);
     }
 }

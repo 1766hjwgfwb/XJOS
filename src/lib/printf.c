@@ -1,13 +1,11 @@
-#include <xjos/printk.h>
+#include <libc/stdarg.h>
 #include <libc/stdio.h>
-#include <drivers/console.h>
-
-
+#include <xjos/syscall.h>
 
 static char buf[1024];
 
 
-int printk(const char *fmt,...) {
+int printf(const char *fmt,...) {
     va_list args;
     
     int i;
@@ -18,7 +16,7 @@ int printk(const char *fmt,...) {
 
     va_end(args);
 
-    console_write(buf, i);
+    write(stdout, buf, i);
 
     return i;
 }

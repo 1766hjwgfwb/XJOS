@@ -1,5 +1,6 @@
 #include <libc/assert.h>
 #include <xjos/printk.h>
+#include <libc/stdio.h>
 #include <xjos/types.h>
 
 
