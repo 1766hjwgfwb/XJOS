@@ -11,6 +11,11 @@
 
 // user stack top
 #define USER_STACK_TOP 0x8000000    // 128MB
+
+#define USER_STACK_SIZE 0x200000   // 2MB
+
+// 128MB - 2MB = 126MB
+#define USER_STACK_BOTTOM (USER_STACK_TOP - USER_STACK_SIZE)
  
 #define KERNEL_PAGE_DIR 0x1000
 
@@ -28,7 +33,7 @@ typedef struct {
     u32 index : 20;           // page index
 }_packed page_entry_t;
 
-
+u32 get_cr2();
 u32 get_cr3();
 void set_cr3(u32 pde);
 
@@ -39,5 +44,7 @@ void free_kpage(u32 vaddr, u32 count);
 // vaddr <-> paddr
 void link_page(u32 vaddr);
 void unlink_page(u32 vaddr);
+
+page_entry_t *copy_pde();
 
 #endif /* XJOS_MEMORY_H */

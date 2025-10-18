@@ -26,6 +26,7 @@ handler_t handler_table[IDT_SIZE];
 
 extern handler_t handler_entry_table[ENTRY_SIZE];
 extern void syscall_handler();
+extern void page_fault();
 
 
 static char *messages[] = {
@@ -167,6 +168,8 @@ static void idt_init() {
     for (size_t i = 0; i < 0x20; i++) {
         handler_table[i] = exception_handler;
     }
+
+    handler_table[0xe] = page_fault;
 
     for (size_t i = 0x20; i < ENTRY_SIZE; i++) {
         handler_table[i] = default_handler;

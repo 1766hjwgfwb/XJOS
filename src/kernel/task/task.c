@@ -147,6 +147,10 @@ void task_unblock(task_t *task) {
 void task_activate(task_t *task) {
     assert(task->magic == XJOS_MAGIC);
 
+    // Process switching pde
+    if (task->pde != get_cr3())
+        set_cr3(task->pde);
+
     if (task->uid != KERNEL_USER)
         tss.esp0 = (u32)task + PAGE_SIZE;
 }
@@ -275,6 +279,10 @@ void task_to_user_mode(target_t target) {
     void *buf = (void *)alloc_kpage(1);
     bitmap_init(task->vmap, buf, PAGE_SIZE, KERNEL_MEMORY_SIZE / PAGE_SIZE);
 
+    // user process page directory
+    task->pde = (u32)copy_pde();
+    set_cr3(task->pde);
+
     u32 addr = (u32)task + PAGE_SIZE;
     addr -= sizeof(intr_frame_t);
     intr_frame_t *iframe = (intr_frame_t *)addr;
@@ -298,12 +306,10 @@ void task_to_user_mode(target_t target) {
 
     iframe->error = XJOS_MAGIC;
 
-    // alloc user stack
-    u32 stack3 = alloc_kpage(1);
 
     iframe->eip = (u32)target;
     iframe->eflags = (0 << 12 | 0b10 | 1 << 9);
-    iframe->esp = stack3 + PAGE_SIZE;
+    iframe->esp = USER_STACK_TOP;
 
     // esp -> iframe
     asm volatile (
