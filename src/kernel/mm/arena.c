@@ -81,7 +81,7 @@ void *kmalloc(size_t size) {
             list_push(&arena->desc->free_list, block);
             assert(list_search(&arena->desc->free_list, block));
         }
-    }
+    } 
 
     // distribute block
     block = list_pop(&desc->free_list);

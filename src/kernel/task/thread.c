@@ -24,7 +24,9 @@ void idle_thread() {
 static void user_init_thread() {
     u32 counter = 0;
     while (true) {
-        
+        test();
+
+        sleep(10000000);
     }
 }
 
@@ -39,21 +41,6 @@ void test_thread() {
     set_interrupt_state(true);
     u32 count = 0;
     while (true) {
-        LOGK("----------------------\n");
-        void *ptr = kmalloc(1200);
-        LOGK("kmalloc 0x%p\n", ptr);
-        kfree(ptr);
-        
-        LOGK("----------------------\n");
-        ptr = kmalloc(1024);
-        LOGK("kmalloc 0x%p\n", ptr);
-        kfree(ptr);
-        
-        LOGK("----------------------\n");
-        ptr = kmalloc(54);
-        LOGK("kmalloc 0x%p\n", ptr);
-        kfree(ptr);
-
-        sleep(10000000000);
+        sleep(10000);
     }
 }

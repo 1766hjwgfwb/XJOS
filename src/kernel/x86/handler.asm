@@ -176,7 +176,7 @@ extern syscall_check
 extern syscall_table
 global syscall_handler
 syscall_handler:
-    xchg bx, bx
+    ; xchg bx, bx
 
     push eax
     call syscall_check
@@ -193,7 +193,7 @@ syscall_handler:
     pusha
 
     push 0x80
-    xchg bx, bx
+    ; xchg bx, bx
 
     push edx    ; arg3
     push ecx    ; arg2
@@ -201,7 +201,7 @@ syscall_handler:
 
     call [syscall_table + eax * 4]
 
-    xchg bx, bx
+    ; xchg bx, bx
     add esp, 12     ; system invoke return
 
     mov dword [esp + 8 * 4], eax

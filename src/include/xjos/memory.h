@@ -6,7 +6,12 @@
 #define PAGE_SIZE 0x1000        // one page is 4KB
 #define MEMORY_BASE 0x100000     // memory starts at 1M
 
+// kernel memory size
+#define KERNEL_MEMORY_SIZE 0x800000 // 8MB
 
+// user stack top
+#define USER_STACK_TOP 0x8000000    // 128MB
+ 
 #define KERNEL_PAGE_DIR 0x1000
 
 typedef struct {
@@ -30,5 +35,9 @@ void set_cr3(u32 pde);
 // alloc and free count contiguous kernel pages
 u32 alloc_kpage(u32 count);
 void free_kpage(u32 vaddr, u32 count);
+
+// vaddr <-> paddr
+void link_page(u32 vaddr);
+void unlink_page(u32 vaddr);
 
 #endif /* XJOS_MEMORY_H */

@@ -10,6 +10,7 @@
 #include <xjos/list.h>
 #include <libc/string.h>
 #include <xjos/global.h>
+#include <xjos/arena.h>
 
 #define LOGK(fmt, args...) DEBUGK(fmt, ##args)
 
@@ -270,6 +271,10 @@ static task_t *task_create(target_t target, const char *name, u32 priority, u32 
 void task_to_user_mode(target_t target) {
     task_t *task = running_task();
 
+    task->vmap = kmalloc(sizeof(bitmap_t));
+    void *buf = (void *)alloc_kpage(1);
+    bitmap_init(task->vmap, buf, PAGE_SIZE, KERNEL_MEMORY_SIZE / PAGE_SIZE);
+
     u32 addr = (u32)task + PAGE_SIZE;
     addr -= sizeof(intr_frame_t);
     intr_frame_t *iframe = (intr_frame_t *)addr;
@@ -335,5 +340,5 @@ void task_init() {
 
     idle_task = task_create(idle_thread, "idle", 1, KERNEL_USER);
     task_create(init_thread, "init", 5, NORMAL_USER);
-    task_create(test_thread, "test", 5, KERNEL_USER);
+    task_create(test_thread, "test", 4, KERNEL_USER);
 }
