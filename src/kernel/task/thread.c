@@ -24,19 +24,9 @@ void idle_thread() {
 static void user_init_thread() {
     u32 counter = 0;
     while (true) {
-        BMB;
-        char *ptr = (char *)0x900000;
-        brk(ptr);
-        BMB;
-        
-        ptr -= 0x1000;
-        ptr[3] = 0xff;
-        BMB;
-        brk((char *)0x800000);
-        BMB;
+        printf("init thread %d %d %d ...\n", getpid(), getppid(), counter++);
 
-
-        sleep(1000000);
+        sleep(1000);
     }
 }
 
@@ -51,6 +41,7 @@ void test_thread() {
     set_interrupt_state(true);
     u32 count = 0;
     while (true) {
-        sleep(10000);
+        printf("test thread %d %d %d ...\n", getpid(), getppid(), count++);
+        sleep(2000);
     }
 }

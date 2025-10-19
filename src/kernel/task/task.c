@@ -96,12 +96,25 @@ void task_wakeup() {
 static task_t *get_free_task() {
     for (int i = 0; i < NR_TASKS; i++) {
         if (tasks_table[i] == NULL) {
-            tasks_table[i] = (task_t *)alloc_kpage(1);        // onec page for task_t
-            return (task_t *)tasks_table[i];
+            task_t *task = (task_t *)alloc_kpage(1);        // onec page for task_t
+            memset(task, 0, PAGE_SIZE);
+            task->pid = i;
+            tasks_table[i] = task;
+            return task;
         }
     }
 
     panic("No free task");
+}
+
+
+pid_t sys_getpid() {
+    return running_task()->pid;
+}
+
+
+pid_t sys_getppid() {
+    return running_task()->ppid;
 }
 
 
@@ -232,7 +245,6 @@ void schedule() {
 
 static task_t *task_create(target_t target, const char *name, u32 priority, u32 uid) {
     task_t *task = get_free_task();
-    memset(task, 0, PAGE_SIZE);
 
     u32 stack = (u32)task + PAGE_SIZE;
 
@@ -347,5 +359,5 @@ void task_init() {
 
     idle_task = task_create(idle_thread, "idle", 1, KERNEL_USER);
     task_create(init_thread, "init", 5, NORMAL_USER);
-    task_create(test_thread, "test", 4, KERNEL_USER);
+    task_create(test_thread, "test", 5, KERNEL_USER);
 }

@@ -33,6 +33,8 @@ typedef struct {
     u32 age;                 // age
     char name[TASK_NAME_LEN]; // task name
     u32 uid;                 // user id
+    pid_t pid;
+    pid_t ppid;
     u32 pde;                 // page directory entry
     bitmap_t *vmap;          // process virtual memory bitmap
     u32 brk;                 // process heap top
@@ -89,6 +91,9 @@ void task_sleep(u32 ms);
 void task_wakeup();
 
 void task_to_user_mode(target_t target);
+
+pid_t sys_getpid();
+pid_t sys_getppid();
 
 
 #endif /* _XJOS_TASK_H_ */
