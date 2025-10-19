@@ -4,6 +4,7 @@
 #include <xjos/syscall.h>
 #include <xjos/task.h>
 #include <drivers/console.h>
+#include <xjos/memory.h>
 
 extern void link_page(u32 vaddr);
 extern void unlink_page(u32 vaddr);
@@ -11,7 +12,7 @@ extern void unlink_page(u32 vaddr);
 
 #define LOGK(fmt, args...) DEBUGK(fmt, ##args)
 
-#define SYSTEM_SIZE (64)
+#define SYSTEM_SIZE (256)
 
 handler_t syscall_table[SYSTEM_SIZE];
 
@@ -50,5 +51,6 @@ void syscall_init() {
     syscall_table[SYS_NR_TEST] = sys_test;
     syscall_table[SYS_NR_SLEEP] = task_sleep;
     syscall_table[SYS_NR_YIELD] = task_yield;
+    syscall_table[SYS_NR_BRK] = sys_brk;
     syscall_table[SYS_NR_WRITE] = sys_write;
 }

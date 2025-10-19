@@ -35,6 +35,7 @@ typedef struct {
     u32 uid;                 // user id
     u32 pde;                 // page directory entry
     bitmap_t *vmap;          // process virtual memory bitmap
+    u32 brk;                 // process heap top
     u32 magic;               // kernel magic number
 }task_t;
 
