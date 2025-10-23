@@ -78,6 +78,11 @@ pid_t fork() {
 }
 
 
+void exit(int status) {
+    _syscall1(SYS_NR_EXIT, status);
+}
+
+
 int32 brk(void *addr) {
     return _syscall1(SYS_NR_BRK, (u32)addr);
 }

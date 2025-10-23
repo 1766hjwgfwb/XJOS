@@ -7,6 +7,7 @@
 
 typedef enum {
     SYS_NR_TEST,
+    SYS_NR_EXIT = 1,
     SYS_NR_FORK = 2,
     SYS_NR_WRITE = 4,
     SYS_NR_GETPID = 20,
@@ -25,6 +26,8 @@ pid_t getpid();
 pid_t getppid();
 
 pid_t fork();
+
+void exit(int status);
 
 int32 brk(void *addr);
 

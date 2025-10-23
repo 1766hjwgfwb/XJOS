@@ -48,6 +48,8 @@ void unlink_page(u32 vaddr);
 // copy pde
 page_entry_t *copy_pde();
 
+void free_pde();
+
 // sys brk
 int32 sys_brk(void *addr);
 

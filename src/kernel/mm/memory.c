@@ -67,8 +67,8 @@ void memory_init(u32 magic, u32 addr) {
         ptr = (ards_t*)(addr + 4);  // +4 bytes pointer to ards_t array
 
         for (int i = 0; i < count; i++, ptr++) {
-            // LOGK("Memory base 0x%p size 0x%p type %d\n",
-                // (u32)ptr->base, (u32)ptr->size, (u32)ptr->type);
+            LOGK("Memory base 0x%p size 0x%p type %d\n",
+                (u32)ptr->base, (u32)ptr->size, (u32)ptr->type);
             // find max valid memory zone
             if (ptr->type == ZONE_VALID && ptr->size > memory_size) {
                 memory_base = (u32)ptr->base;
@@ -79,8 +79,8 @@ void memory_init(u32 magic, u32 addr) {
         panic("Memory init failed: invalid magic number, 0x%p\n", (u32)magic);
     }
 
-    // LOGK("ARDS count %d\n", count);
-    // LOGK("Memory base 0x%p size 0x%p\n", (u32)memory_base, (u32)memory_size);
+    LOGK("ARDS count %d\n", count);
+    LOGK("Memory base 0x%p size 0x%p\n", (u32)memory_base, (u32)memory_size);
 
     assert(memory_base == MEMORY_BASE);
     assert((memory_size & 0xfff) == 0);
@@ -89,7 +89,7 @@ void memory_init(u32 magic, u32 addr) {
     total_pages = IDX(memory_size) + IDX(MEMORY_BASE);  // 31M + 1M
     free_pages = IDX(memory_size);
 
-    // LOGK("Total pages %d Free pages %d\n", total_pages, free_pages);
+    LOGK("Total pages %d Free pages %d\n", total_pages, free_pages);
 
     // check system memory size
     if (memory_size < KERNEL_MEMORY_SIZE) {
@@ -119,7 +119,7 @@ void memory_map_init() {
     */
     memory_map_pages = div_round_up(total_pages, PAGE_SIZE);
 
-    // LOGK("Memory map page count %d\n", memory_map_pages);
+    LOGK("Memory map page count %d\n", memory_map_pages);
     
     free_pages -= memory_map_pages;
 
@@ -128,13 +128,13 @@ void memory_map_init() {
 
     // set start page index
     start_page = IDX(memory_base) + memory_map_pages;
-    // LOGK("Start page index %d\n", start_page);
+    LOGK("Start page index %d\n", start_page);
 
     for (size_t i = 0; i < start_page; i++) {
         memory_map[i] = 1;  // set all pages as used
     }
 
-    // LOGK("Total pages %d free pages %d\n", total_pages, free_pages);
+    LOGK("Total pages %d free pages %d\n", total_pages, free_pages);
 
     // 2048 - 256 = 1792 page, need use bytes / 8 
     u32 length = (IDX(KERNEL_MEMORY_SIZE) - IDX(MEMORY_BASE)) / 8;
@@ -152,11 +152,11 @@ static u32 get_page() {
             memory_map[i] = 1;  // set as used
             free_pages--;
 
-            // LOGK("Get page index 0x%x\n", i);
+            LOGK("Get page index 0x%x\n", i);
             assert(free_pages >= 0);
 
             u32 page = PAGE(i);  // current page address
-            // LOGK("Get page addr 0x%p\n", page);
+            LOGK("Get page addr 0x%p\n", page);
 
             return page;
         }
@@ -183,7 +183,7 @@ static void put_page(u32 addr) {
     }
 
     assert(free_pages > 0 && free_pages < total_pages);
-    // LOGK("Put page addr 0x%p\n", addr);
+    LOGK("Put page addr 0x%p\n", addr);
 }
 
 
@@ -242,7 +242,7 @@ static page_entry_t *get_pte(u32 vaddr, bool create) {
     page_entry_t *table = (page_entry_t *)(PDE_MASK | (pde_idx << 12));
 
     if (!entry->present) {
-        // LOGK("Get and create page table entry for 0x%p\n", vaddr);
+        LOGK("Get and create page table entry for 0x%p\n", vaddr);
         u32 page = get_page();  // page table
         entry_init(entry, IDX(page));
         memset(table, 0, PAGE_SIZE);  
@@ -317,7 +317,7 @@ static u32 scan_page(bitmap_t *map, u32 count) {
         panic("Scan page fail!");
     
     idx_t addr = PAGE(index);
-    // LOGK("Scan page addr 0x%p count %d\n", addr, count);
+    LOGK("Scan page addr 0x%p count %d\n", addr, count);
     return addr;
 }
 
@@ -340,7 +340,7 @@ u32 alloc_kpage(u32 count) {
     assert(count > 0);
 
     idx_t vaddr = scan_page(&kernel_map, count);
-    // LOGK("Alloc kernel pages 0x%p count %d\n", vaddr, count);
+    LOGK("Alloc kernel pages 0x%p count %d\n", vaddr, count);
     return vaddr;
 }
 
@@ -350,7 +350,7 @@ void free_kpage(u32 vaddr, u32 count) {
     assert(count > 0);
 
     reset_page(&kernel_map, vaddr, count);
-    // LOGK("free kernel pages 0x%p count %d\n", vaddr, count);
+    LOGK("free kernel pages 0x%p count %d\n", vaddr, count);
 }
 
 
@@ -379,7 +379,7 @@ void link_page(u32 vaddr) {
     entry_init(entry, IDX(paddr));
     flush_tlb(vaddr);
 
-    // LOGK("Link from 0x%p to 0x%p\n", vaddr, paddr);
+    LOGK("Link from 0x%p to 0x%p\n", vaddr, paddr);
 }
 
 
@@ -432,6 +432,39 @@ static u32 copy_page(void *page) {
 
     flush_tlb(0);   // Strengthen Assertion
     return paddr;
+}
+
+
+void free_pde() {
+    task_t *task = running_task();
+
+    assert(task->uid != KERNEL_USER);
+
+    page_entry_t *pde = get_pde();
+    
+    // pde 2 - 1022
+    for (size_t didx = 2; didx < 1023; didx++) {
+        page_entry_t *dentry = &pde[didx];
+        if (!dentry->present)
+            continue;
+
+        page_entry_t *pte = (page_entry_t *)(PDE_MASK | didx << 12);
+
+        // pte 0 - 1023
+        for (size_t titx = 0; titx < 1024; titx++) { 
+            page_entry_t *entry = &pte[titx];
+            if (!entry->present)
+                continue;
+
+            assert(memory_map[entry->index] > 0);
+            put_page(PAGE(entry->index));   // free page
+        }
+
+        put_page(PAGE(dentry->index));      // free page table
+    }
+
+    free_kpage(task->pde, 1);               // free pde
+    LOGK("free pages %d\n", free_pages);
 }
 
 
@@ -525,7 +558,7 @@ void page_fault(u32 vector,
     
     assert(vector == 0xe);
     u32 vaddr = get_cr2();
-    // LOGK("fault address 0x%p\n", vaddr);
+    LOGK("fault address 0x%p\n", vaddr);
 
     page_error_code_t *code = (page_error_code_t *)&error;
     task_t *task = running_task();
@@ -545,7 +578,7 @@ void page_fault(u32 vector,
         if (memory_map[entry->index] == 1) {
             // parent process exit
             entry->write = true;
-            // LOGK("write page for 0x%p\n", vaddr);
+            LOGK("write page for 0x%p\n", vaddr);
         } else {
             // >> 12 + << 12, clear offset
             void *page = (void *)PAGE(IDX(vaddr));
@@ -553,7 +586,7 @@ void page_fault(u32 vector,
             memory_map[entry->index]--;
             entry_init(entry, IDX(paddr));
             flush_tlb(vaddr);
-            // LOGK("copy page for 0x%p\n", vaddr);
+            LOGK("copy page for 0x%p\n", vaddr);
         }
 
         return;

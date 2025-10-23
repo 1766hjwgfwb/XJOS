@@ -25,15 +25,15 @@ static void user_init_thread() {
     u32 counter = 0;
     while (true) {
 
-        /* pid_t x = fork();
-        pid_t y = fork();
-
-        printf("x = %d y = %d\n", x, y);
- */
-        for (int i = 0; i < 2; i++) {
-            fork();
-            printf("hello");
+        pid_t x = fork();
+        if (x) {
+            printf("parent: %d\n", x);
+        } else {
+            printf("child: %d\n", x);
+            exit(0);
         }
+
+        printf("after exit test print\n");
 
 
         while (1);
