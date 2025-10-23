@@ -117,6 +117,67 @@ pid_t sys_getppid() {
     return running_task()->ppid;
 }
 
+extern void interrupt_exit();
+
+static void task_build_stack(task_t *task) {
+    u32 addr = (u32)task + PAGE_SIZE;
+    addr -= sizeof(intr_frame_t);
+
+    intr_frame_t *iframe = (intr_frame_t *)addr;
+    iframe->eax = 0;
+
+    addr -= sizeof(task_frame_t);
+    task_frame_t *frame = (task_frame_t *)addr;
+
+    frame->ebp = 0x44444444; // ebp
+    frame->ebx = 0x11111111; // ebx
+    frame->edi = 0x33333333; // edi
+    frame->esi = 0x22222222; // esi
+
+    frame->eip = interrupt_exit; // eip
+    // * schedule -> eip(interrupt_exit) -> eax = 0(fork)
+
+    task->stack = (u32 *)frame;
+}
+
+
+pid_t task_fork() {
+    task_t *task = running_task();
+
+    // no stoppage, excute current task
+    assert(task->node.next == NULL && task->node.prev == NULL && task->state == TASK_RUNNING);
+
+    // copy kernel stack and PCB
+    task_t *child = get_free_task();
+    pid_t pid = child->pid; // store pid before memcpy
+    memcpy(child, task, PAGE_SIZE);
+
+    child->pid = pid;
+    child->ppid = task->pid;
+    child->ticks = child->priority;
+    child->state = TASK_READY;
+
+    // copy user process vmap
+    child->vmap = kmalloc(sizeof(bitmap_t));
+    memcpy(child->vmap, task->vmap, sizeof(bitmap_t));
+
+    // copy vmap cache
+    void *buf = (void *)alloc_kpage(1);
+    memcpy(buf, task->vmap->bits, PAGE_SIZE);
+    child->vmap->bits = buf;
+    
+    // copy page directory
+    child->pde = (u32)copy_pde();
+
+    // build child kernel stack
+    task_build_stack(child);    // * ROP
+
+    list_pushback(&ready_queues[child->priority], &child->node);
+    bitmap_set(&ready_bitmap, child->priority, true);
+
+    return child->pid;
+}
+
 
 void task_yield() {
     schedule();
@@ -290,6 +351,7 @@ void task_to_user_mode(target_t target) {
 
     task->vmap = kmalloc(sizeof(bitmap_t));
     void *buf = (void *)alloc_kpage(1);
+    // 8M / 0x1000 = 0x800
     bitmap_init(task->vmap, buf, PAGE_SIZE, KERNEL_MEMORY_SIZE / PAGE_SIZE);
 
     // user process page directory
@@ -359,5 +421,5 @@ void task_init() {
 
     idle_task = task_create(idle_thread, "idle", 1, KERNEL_USER);
     task_create(init_thread, "init", 5, NORMAL_USER);
-    task_create(test_thread, "test", 5, KERNEL_USER);
+    task_create(test_thread, "test", 4, KERNEL_USER);
 }

@@ -73,6 +73,11 @@ pid_t getppid() {
 }
 
 
+pid_t fork() {
+    return _syscall0(SYS_NR_FORK);
+}
+
+
 int32 brk(void *addr) {
     return _syscall1(SYS_NR_BRK, (u32)addr);
 }

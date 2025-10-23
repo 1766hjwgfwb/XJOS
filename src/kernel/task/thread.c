@@ -24,8 +24,19 @@ void idle_thread() {
 static void user_init_thread() {
     u32 counter = 0;
     while (true) {
-        printf("init thread %d %d %d ...\n", getpid(), getppid(), counter++);
 
+        /* pid_t x = fork();
+        pid_t y = fork();
+
+        printf("x = %d y = %d\n", x, y);
+ */
+        for (int i = 0; i < 2; i++) {
+            fork();
+            printf("hello");
+        }
+
+
+        while (1);
         sleep(1000);
     }
 }
@@ -41,7 +52,6 @@ void test_thread() {
     set_interrupt_state(true);
     u32 count = 0;
     while (true) {
-        printf("test thread %d %d %d ...\n", getpid(), getppid(), count++);
         sleep(2000);
     }
 }
