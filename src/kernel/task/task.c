@@ -141,6 +141,58 @@ static void task_build_stack(task_t *task) {
 }
 
 
+pid_t task_waitpid(pid_t pid, int32 *status) {
+    task_t *task = running_task();
+    task_t *child = NULL;
+
+    while (true) {
+        bool has_child = false;
+        for (size_t i = 0; i < NR_TASKS; i++) {
+            task_t *ptr = tasks_table[i];
+            if (!ptr)
+                continue;
+            
+            if (ptr->ppid != task->pid)
+                continue;
+            if (pid != ptr->pid && pid != -1)
+                continue;
+            
+            // child died
+            if (ptr->state == TASK_DIED) {
+                child = ptr;    // find child
+                tasks_table[i] = NULL;
+                goto rollback;
+            }
+
+            // child liveing
+            has_child = true;
+        }
+
+        if (has_child) {
+            // pid liveing or -1
+            task->waitpid = pid;
+            // wait stoppage
+            task_block(task, NULL, TASK_WAITING);
+            
+            // renew execute while span
+            continue;
+        }
+        
+        break;
+    }
+    // parent process has no matching child process
+    return -1;
+
+// child died, rollback
+rollback:
+    // copy Zombie Process status to parent process
+    *status = child->status;
+    int32 ret = child->pid;
+    free_kpage((u32)child, 1);
+    return ret;
+}
+
+
 void task_exit(int status) {
     task_t *task = running_task();
 
@@ -155,7 +207,7 @@ void task_exit(int status) {
     free_kpage((u32)task->vmap->bits, 1);
     kfree(task->vmap);
 
-    for (size_t i = 0; i < NR_TASKS; i++) {
+    for (size_t i = 2; i < NR_TASKS; i++) {
         task_t *child = tasks_table[i];
 
         if (!child)
@@ -166,6 +218,14 @@ void task_exit(int status) {
     }
 
     LOGK("task 0x%p exit...\n", task);
+    
+    // wakeup parent process
+    task_t *parent = tasks_table[task->ppid];
+    if (parent->state == TASK_WAITING &&
+         (parent->waitpid == -1 || parent->waitpid == task->pid)) {
+        task_unblock(parent);
+    }
+
     schedule();
 }
 
@@ -415,6 +475,7 @@ void task_to_user_mode(target_t target) {
     iframe->eflags = (0 << 12 | 0b10 | 1 << 9);
     iframe->esp = USER_STACK_TOP;
 
+    interrupt_disable();    // cli <-> iret
     // esp -> iframe
     asm volatile (
         "movl %0, %%esp\n"

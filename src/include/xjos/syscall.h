@@ -10,6 +10,7 @@ typedef enum {
     SYS_NR_EXIT = 1,
     SYS_NR_FORK = 2,
     SYS_NR_WRITE = 4,
+    SYS_NR_WAITPID = 7,
     SYS_NR_GETPID = 20,
     SYS_NR_BRK = 45,
     SYS_NR_GETPPID = 64,
@@ -21,6 +22,8 @@ typedef enum {
 u32 test();
 void yield();
 void sleep(u32 ms);
+
+pid_t waitpid(pid_t pid, int32 *status);
 
 pid_t getpid();
 pid_t getppid();

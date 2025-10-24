@@ -63,6 +63,11 @@ void sleep(u32 ms) {
 }
 
 
+pid_t waitpid(pid_t pid, int32 *status) {
+    return _syscall2(SYS_NR_WAITPID, pid, (u32)status);
+}
+
+
 pid_t getpid() {
     return _syscall0(SYS_NR_GETPID);
 }

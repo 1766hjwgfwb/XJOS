@@ -53,6 +53,7 @@ void syscall_init() {
     syscall_table[SYS_NR_SLEEP] = task_sleep;
     syscall_table[SYS_NR_YIELD] = task_yield;
 
+    syscall_table[SYS_NR_WAITPID] = task_waitpid;
     syscall_table[SYS_NR_GETPID] = sys_getpid;
     syscall_table[SYS_NR_GETPPID] = sys_getppid;
 

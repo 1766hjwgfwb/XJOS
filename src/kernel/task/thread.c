@@ -23,20 +23,21 @@ void idle_thread() {
 
 static void user_init_thread() {
     u32 counter = 0;
+    int status;
     while (true) {
 
         pid_t x = fork();
         if (x) {
-            printf("parent: %d\n", x);
+            printf("fork after parent %d, %d, %d\n", x, getpid(), getppid());
+            // sleep(1000);
+            pid_t child = waitpid(x, &status);
+            printf("waitpid %d, %d\n", child, status);
         } else {
-            printf("child: %d\n", x);
-            exit(0);
+            printf("fork after child %d, %d, %d\n", x, getpid(), getppid());
+            sleep(1000);
+            exit(5);
         }
-
-        printf("after exit test print\n");
-
-
-        while (1);
+        while(1);
         sleep(1000);
     }
 }

@@ -38,7 +38,8 @@ typedef struct {
     u32 pde;                 // page directory entry
     bitmap_t *vmap;          // process virtual memory bitmap
     u32 brk;                 // process heap top
-    bool status;             // exit status
+    int status;             // exit status
+    pid_t waitpid;          // process waitpid result
     u32 magic;               // kernel magic number
 }task_t;
 
@@ -93,6 +94,7 @@ void task_wakeup();
 
 void task_to_user_mode(target_t target);
 
+pid_t task_waitpid(pid_t pid, int32 *status);
 pid_t sys_getpid();
 pid_t sys_getppid();
 
