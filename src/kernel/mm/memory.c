@@ -525,8 +525,9 @@ int32 sys_brk(void *addr) {
 
     // if brk < old_brk, need free page
     if (old_brk > brk) {
-        for (; brk < old_brk; brk += PAGE_SIZE)
-            unlink_page(brk);
+        // !bug  brk -> task->brk = brk, so need temp store old_brk
+        for (u32 page = brk; page < old_brk; page += PAGE_SIZE)
+            unlink_page(page);
     } else if (IDX(brk - old_brk) > free_pages) {
         return -1; //*translation page fault
     }

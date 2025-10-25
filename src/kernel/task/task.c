@@ -147,20 +147,18 @@ pid_t task_waitpid(pid_t pid, int32 *status) {
 
     while (true) {
         bool has_child = false;
-        for (size_t i = 0; i < NR_TASKS; i++) {
-            task_t *ptr = tasks_table[i];
-            if (!ptr)
+        list_node_t *node;
+        for (node = task->children.head.next; node != &task->children.head; node = node->next) {
+            task_t *ptr = list_entry(node, task_t, sibling);
+
+            // find child( pid == -1 or pid == ptr->pid)
+            if (pid != ptr->pid && pid != -1) {
                 continue;
-            
-            if (ptr->ppid != task->pid)
-                continue;
-            if (pid != ptr->pid && pid != -1)
-                continue;
-            
-            // child died
+            }
+
+            // match child
             if (ptr->state == TASK_DIED) {
-                child = ptr;    // find child
-                tasks_table[i] = NULL;
+                child = ptr;
                 goto rollback;
             }
 
@@ -188,6 +186,11 @@ rollback:
     // copy Zombie Process status to parent process
     *status = child->status;
     int32 ret = child->pid;
+    
+    // clear child process, and remove from children list
+    tasks_table[child->pid] = NULL;
+    list_remove(&child->sibling);
+
     free_kpage((u32)child, 1);
     return ret;
 }
@@ -207,20 +210,22 @@ void task_exit(int status) {
     free_kpage((u32)task->vmap->bits, 1);
     kfree(task->vmap);
 
-    for (size_t i = 2; i < NR_TASKS; i++) {
-        task_t *child = tasks_table[i];
+    task_t *parent = tasks_table[task->ppid];
+    list_node_t *node;
 
-        if (!child)
-            continue;
-        if (child->ppid != task->pid)
-            continue;
-        child->ppid = task->ppid;   // child -> task(exit) -> task parent
+    // Traversal task child list
+    while (!list_empty(&task->children)) {
+        node = list_pop(&task->children);
+        task_t *child = list_entry(node, task_t, sibling);
+        
+        child->ppid = parent->pid;
+
+        list_pushback(&parent->children, &child->sibling);
     }
 
     LOGK("task 0x%p exit...\n", task);
     
     // wakeup parent process
-    task_t *parent = tasks_table[task->ppid];
     if (parent->state == TASK_WAITING &&
          (parent->waitpid == -1 || parent->waitpid == task->pid)) {
         task_unblock(parent);
@@ -245,6 +250,13 @@ pid_t task_fork() {
     child->ppid = task->pid;
     child->ticks = child->priority;
     child->state = TASK_READY;
+
+    // fix child list, becasue memcpy copy parent list
+    list_init(&child->children);
+    list_node_init(&child->sibling);
+
+    // add the child to the "children" linked list of the parent process("task")
+    list_pushback(&task->children, &child->sibling);
 
     // copy user process vmap
     child->vmap = kmalloc(sizeof(bitmap_t));
@@ -422,7 +434,12 @@ static task_t *task_create(target_t target, const char *name, u32 priority, u32 
     task->pde = KERNEL_PAGE_DIR;
     task->age = 0;
     task->brk = KERNEL_MEMORY_SIZE;
-    task->magic = XJOS_MAGIC;       // canary 
+    task->magic = XJOS_MAGIC;       // canary
+    
+    // parent child list
+    list_init(&task->children);
+    list_node_init(&task->sibling);
+
 
     if (strcmp(task->name, "idle") != 0) {
         assert(task->priority < MAX_PRIORITY);

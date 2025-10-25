@@ -82,6 +82,9 @@ static inline u32 list_len(list_t *list);
 
 // Internal helper: inserts new_node between prev and next.
 static _inline void __list_add(list_node_t *new_node, list_node_t *prev, list_node_t *next) {
+    // one node match one list
+    assert(new_node->prev == NULL && new_node->next == NULL);
+
     next->prev = new_node;
     new_node->next = next;
     new_node->prev = prev;
@@ -98,6 +101,13 @@ static _inline void __list_del(list_node_t *prev, list_node_t *next) {
 static _inline void list_init(list_t *list) {
     list->head.next = &list->head;
     list->head.prev = &list->head;
+}
+
+
+// Initializes a list node (to a "not in list" state).
+static _inline void list_node_init(list_node_t *node) {
+    node->prev = NULL;
+    node->next = NULL;
 }
 
 // Inserts 'node' after 'anchor'.

@@ -25,6 +25,8 @@ typedef enum {
 typedef struct {
     u32 *stack;              // kernel stack
     list_node_t node;        // task postpage node
+    list_t children;         // child tasks list
+    list_node_t sibling;     // parent task sibling node
     task_state_t state;      // state   
     u32 priority;            // priority
     u32 base_priority;       // base priority
