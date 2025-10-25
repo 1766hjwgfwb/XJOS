@@ -506,7 +506,7 @@ void task_init() {
 
     task_setup();
 
-    bitmap_init(&ready_bitmap, (char *)ready_bitmap_bits, MAX_PRIORITY, 0);
+    bitmap_init(&ready_bitmap, (char *)ready_bitmap_bits, MAX_PRIORITY / 8, 0);
 
 
     idle_task = task_create(idle_thread, "idle", 1, KERNEL_USER);

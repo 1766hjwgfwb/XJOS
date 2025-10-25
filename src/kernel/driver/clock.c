@@ -69,6 +69,13 @@ void clock_handler(int vector) {
     }
 }
 
+extern time_t startup_time;
+
+time_t sys_time() {
+    // (jiffies * JIFFY / 1000) Unix -> nowdays time seconds
+    return startup_time + (jiffies * JIFFY) / 1000;
+}
+
 
 void pit_init() {
     // mode 2

@@ -11,6 +11,7 @@ typedef enum {
     SYS_NR_FORK = 2,
     SYS_NR_WRITE = 4,
     SYS_NR_WAITPID = 7,
+    SYS_NR_TIME = 13,
     SYS_NR_GETPID = 20,
     SYS_NR_BRK = 45,
     SYS_NR_GETPPID = 64,
@@ -36,7 +37,7 @@ int32 brk(void *addr);
 
 int32 write(fd_t fd, const char *buf, u32 len);
 
-
+time_t time();
 
 
 #endif /* XJOS_SYSCALL_H */

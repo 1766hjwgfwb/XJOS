@@ -42,6 +42,7 @@ int32 sys_write(fd_t fd, const char *buf, u32 len) {
     return 0;
 }
 
+extern time_t sys_time();
 
 void syscall_init() {
     for (size_t i = 0; i < SYSTEM_SIZE; i++) {
@@ -62,4 +63,5 @@ void syscall_init() {
     syscall_table[SYS_NR_BRK] = sys_brk;
 
     syscall_table[SYS_NR_WRITE] = sys_write;
+    syscall_table[SYS_NR_TIME] = sys_time;
 }

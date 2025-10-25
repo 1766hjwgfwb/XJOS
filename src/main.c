@@ -11,16 +11,22 @@ extern void keyboard_init();
 extern void tss_init();
 
 #include <xjos/interrupt.h>
+#include <xjos/debug.h>
+
+extern time_t startup_time;
+
+#define LOGK(fmt, args...) DEBUGK(fmt, ##args)
 
 void kernel_init() {
     tss_init();
     memory_map_init();
     mapping_int();
     arena_init();
+
     interrupt_init();
     clock_init();
     keyboard_init();
-
+    time_init();    
     task_init();
     syscall_init();
 

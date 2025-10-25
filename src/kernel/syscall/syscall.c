@@ -96,3 +96,8 @@ int32 brk(void *addr) {
 int32 write(fd_t fd, const char *buf, u32 len) {
     return _syscall3(SYS_NR_WRITE, fd, (u32)buf, len);
 }
+
+
+time_t time() {
+    return _syscall0(SYS_NR_TIME);
+}

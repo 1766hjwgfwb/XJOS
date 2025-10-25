@@ -168,6 +168,5 @@ void time_init() {
          time.tm_min, 
          time.tm_sec
         );
-
-    // hang();
+    LOGK("startup time address is [0x%p]\n", &startup_time);
 }
