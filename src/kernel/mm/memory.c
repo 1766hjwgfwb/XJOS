@@ -341,6 +341,7 @@ u32 alloc_kpage(u32 count) {
 
     idx_t vaddr = scan_page(&kernel_map, count);
     LOGK("Alloc kernel pages 0x%p count %d\n", vaddr, count);
+    memset((void*)vaddr, 0, count * PAGE_SIZE);
     return vaddr;
 }
 
@@ -526,8 +527,9 @@ int32 sys_brk(void *addr) {
     // if brk < old_brk, need free page
     if (old_brk > brk) {
         // !bug  brk -> task->brk = brk, so need temp store old_brk
-        for (u32 page = brk; page < old_brk; page += PAGE_SIZE)
+        for (u32 page = brk; page < old_brk; page += PAGE_SIZE) {
             unlink_page(page);
+        }
     } else if (IDX(brk - old_brk) > free_pages) {
         return -1; //*translation page fault
     }

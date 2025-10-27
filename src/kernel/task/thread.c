@@ -25,20 +25,6 @@ static void user_init_thread() {
     u32 counter = 0;
     int status;
     while (true) {
-
-        pid_t x = fork();
-        if (x) {
-            printf("fork after parent %d, %d, %d\n", x, getpid(), getppid());
-            // sleep(1000);
-            pid_t child = waitpid(x, &status);
-            printf("waitpid %d, %d %d\n", child, status, time());
-        } else {
-            printf("fork after child %d, %d, %d, time %d\n", x, getpid(), getppid(), time());
-            sleep(1000);
-            exit(5);
-        }
-        while(1);
-        sleep(1000);
     }
 }
 
