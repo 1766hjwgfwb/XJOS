@@ -23,6 +23,7 @@ typedef struct ide_ctrl_t {
     u16 iobase;                     // IO reg base
     ide_disk_t disks[IDE_DISK_NR];  // disk
     ide_disk_t *active;             // current select disk
+    task_t *waiter;          // waiting task
 }ide_ctrl_t;
 
 int ide_pio_read(ide_disk_t *disk, void *buf, u8 count, idx_t lba);
