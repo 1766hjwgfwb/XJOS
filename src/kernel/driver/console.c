@@ -132,12 +132,7 @@ static void srcoll_up() {
         pos -= (screen - MEM_BASE);     // ! Concurrency bug 
 
         // copy 2-25 -> 1-24
-        // memcpy(MEM_BASE, screen + ROW_SIZE, SCR_SIZE - ROW_SIZE);
-        u32 *dst = (u32*)MEM_BASE;
-        u32 *src = (u32*)(screen + ROW_SIZE);
-        for (int i = 0; i < (SCR_SIZE - ROW_SIZE)/4; i++) {
-            dst[i] = src[i];
-        }
+        memcpy((void*)MEM_BASE, (void*)(screen + ROW_SIZE), SCR_SIZE - ROW_SIZE);
 
         // clear last row
         u16 *ptr = (u16 *)(MEM_BASE + SCR_SIZE - ROW_SIZE);
