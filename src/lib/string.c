@@ -115,11 +115,30 @@ int memcmp(const void *lhs, const void *rhs, size_t count) {
 
 
 void *memset(void *dest, int ch, size_t count) {
-    unsigned char *p = (unsigned char *)dest;
-    unsigned char val = (unsigned char)ch;
+    u8 *d = (u8 *)dest;
+    u8 val = (u8)ch;
 
-    for (size_t i = 0; i < count; i++) {
-        p[i] = val; // Set byte value
+    // ch = 0xAB -> val32 = 0xABABABAB
+    u32 val32 = (val << 24) | (val << 16) | (val << 8) | val;
+
+    // head 
+    while (count > 0 && ((u32)d & 0x3) != 0) {
+        *d++ = val;
+        count--;
+    }
+
+    // body
+    u32 *d32 = (u32 *)d;
+    while (count >= 4) {
+        *d32++ = val32;
+        count -= 4;
+    }
+
+    // tail
+    d = (u8 *)d32;
+    while (count > 0) {
+        *d++ = val;
+        count--;
     }
 
     return dest;
@@ -127,11 +146,39 @@ void *memset(void *dest, int ch, size_t count) {
 
 
 void *memcpy(void *dest, const void *src, size_t count) {
-    unsigned char *d = (unsigned char *)dest;
-    const unsigned char *s = (const unsigned char *)src;
+    u8* d = (u8 *)dest;
+    const u8* s = (const u8 *)src;
 
-    for (size_t i = 0; i < count; i++) {
-        d[i] = s[i]; // Copy byte by byte
+    // dest and src are not aligned
+    if (((u32)d & 0x3) != ((u32)s & 0x3)) {
+        while (count--) {
+            *d++ = *s++;
+        }
+        return dest;
+    }
+
+    // dest and src are aligned
+
+    // head
+    while (count > 0 && ((u32)d & 0x3) != 0) {
+        *d++ = *s++;
+        count--;
+    }
+
+    // body
+    u32 *d32 = (u32 *)d;
+    const u32 *s32 = (const u32 *)s;
+    while (count >= 4) {
+        *d32++ = *s32++;
+        count -= 4;
+    }
+
+    // tail
+    d = (u8 *)d32;
+    s = (const u8 *)s32;
+    while (count > 0) {
+        *d++ = *s++;
+        count--;
     }
 
     return dest;
