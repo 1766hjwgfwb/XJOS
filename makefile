@@ -49,11 +49,12 @@ ASM_OBJS := $(patsubst $(SRC_DIR)/%.asm, $(BUILD_DIR)/%.o, $(ASM_SOURCES))
 ENTRY_OBJ  := $(BUILD_DIR)/kernel/x86/start.o
 OTHER_OBJS := $(filter-out $(ENTRY_OBJ), $(C_OBJS) $(ASM_OBJS))
 
+IMAGES := $(BUILD_DIR)/master.img $(BUILD_DIR)/slave.img
 # ====================================================================
 #                            Build Rules
 # ====================================================================
 # Default target
-all: $(BUILD_DIR)/master.img
+all: $(IMAGES)
 
 # --- Bootloader Rules ---
 # Compile boot.asm and loader.asm
@@ -99,6 +100,9 @@ $(BUILD_DIR)/master.img: $(BUILD_DIR)/boot/boot.bin \
 	test -n "$$(find $(BUILD_DIR)/system.bin -size -100k)"
 	dd if=$(BUILD_DIR)/system.bin of=$@ bs=512 count=200 seek=10 conv=notrunc
 
+$(BUILD_DIR)/slave.img:
+	yes | bximage -q -hd=32 -func=create -sectsize=512 -imgmode=flat $@ 
+
 # ====================================================================
 #                    Helper Commands (PHONY targets)
 # ====================================================================
@@ -109,25 +113,27 @@ test: all
 clean:
 	rm -rf $(BUILD_DIR)
 
-bochs: $(BUILD_DIR)/master.img
+bochs: $(IMAGES)
 	bochs -q -f ./bochs/bochsrc -unlock
 
-qemu: $(BUILD_DIR)/master.img
+qemu: $(IMAGES)
 	qemu-system-i386 \
 		-rtc base=localtime \
 		-m 32M \
 		-boot c \
-		-drive file=build/master.img,if=ide,index=0,media=disk,format=raw \
-    	-audiodev pa,id=hda \
+		-drive file=$(BUILD_DIR)/master.img,if=ide,index=0,media=disk,format=raw \
+		-drive file=$(BUILD_DIR)/slave.img,if=ide,index=1,media=disk,format=raw \
+		-audiodev pa,id=hda \
     	-machine pcspk-audiodev=hda
 
-qemug: $(BUILD_DIR)/master.img
+qemug: $(IMAGES)
 	qemu-system-i386 \
 		-s -S \
 		-m 32M \
 		-boot c \
-		-drive file=build/master.img,if=ide,index=0,media=disk,format=raw \
-    	-audiodev pa,id=hda \
+		-drive file=$(BUILD_DIR)/master.img,if=ide,index=0,media=disk,format=raw \
+		-drive file=$(BUILD_DIR)/slave.img,if=ide,index=1,media=disk,format=raw \
+		-audiodev pa,id=hda \
     	-machine pcspk-audiodev=hda
 
 

@@ -23,16 +23,14 @@ void idle_thread() {
 
 static void user_init_thread() {
     u32 counter = 0;
-    int status;
     while (true) {
+        sleep(1000);
     }
 }
 
 
 void init_thread() {
     char temp[100];
-    set_interrupt_state(true);
-    test();
     task_to_user_mode(user_init_thread);
 }
 

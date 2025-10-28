@@ -68,9 +68,51 @@
 #define IDE_LBA_MASTER 0b11100000 // LBA Mode, Master Drive (0xE0)
 #define IDE_LBA_SLAVE 0b11110000  // LBA Mode, Slave Drive (0xF0)
 
+/*
+ * This structure maps the 512-byte data block returned by
+ * the ATA IDENTIFY DEVICE command. The comments indicate the
+ * word offset (1 word = 2 bytes) as per the specification.
+ */
+typedef struct ide_params_t
+{
+    u16 config;                     // 0: General configuration bits
+    u16 cylinders;                  // 01: Number of cylinders
+    u16 RESERVED;                   // 02: Reserved
+    u16 heads;                      // 03: Number of heads
+    u16 RESERVED[5 - 3];            // 04-05: Reserved (vendor specific)
+    u16 sectors;                    // 06: Sectors per track
+    u16 RESERVED[9 - 6];            // 07-09: Reserved (vendor specific)
+    u8 serial[20];                  // 10-19: Serial number (ASCII)
+    u16 RESERVED[22 - 19];          // 20-22: Reserved
+    u8 firmware[8];                 // 23-26: Firmware version (ASCII)
+    u8 model[40];                   // 27-46: Model number (ASCII)
+    u8 drq_sectors;                 // 47: Max sectors per DRQ (older drives)
+    u8 RESERVED[3];                 // 48: Reserved
+    u16 capabilities;               // 49: Capabilities (e.g., LBA support)
+    u16 RESERVED[59 - 49];          // 50-59: Reserved
+    u32 total_lba;                  // 60-61: Total number of LBA sectors (if LBA supported)
+    u16 RESERVED;                   // 62: Reserved
+    u16 mdma_mode;                  // 63: Multiword DMA mode
+    u8 RESERVED;                    // 64: Reserved
+    u8 pio_mode;                    // 64: PIO mode
+    u16 RESERVED[79 - 64];          // 65-79: Reserved (See ATA specification)
+    u16 major_version;              // 80: Major version number
+    u16 minor_version;              // 81: Minor version number
+    u16 commmand_sets[87 - 81];     // 82-87: Supported command sets
+    u16 RESERVED[118 - 87];         // 88-118: Reserved
+    u16 support_settings;           // 119: Supported settings
+    u16 enable_settings;            // 120: Enabled settings
+    u16 RESERVED[221 - 120];        // 121-221: Reserved
+    u16 transport_major;            // 222: Transport major version
+    u16 transport_minor;            // 223: Transport minor version
+    u16 RESERVED[254 - 223];        // 224-254: Reserved
+    u16 integrity;                  // 255: Checksum / Integrity word
+} _packed ide_params_t;
+
+
 ide_ctrl_t controllers[IDE_CTRL_NR];
 
-void ide_handler(int vector) {
+static void ide_handler(int vector) {
     send_eoi(vector);
 
     // exp. vector = 0x20 + 0xe = 0x2e, 0x2e - 0x20 - 0xe = 0
@@ -123,6 +165,15 @@ static u32 ide_busy_wait(ide_ctrl_t *ctrl, u8 mask) {
         if ((state & mask) == mask) // wait state done
             return 0;
     }      
+}
+
+
+// disk reset
+static void ide_reset_controller(ide_ctrl_t *ctrl) {
+    outb(ctrl->iobase + IDE_CONTROL, IDE_CTRL_SRST);
+    ide_busy_wait(ctrl, IDE_SR_NULL);
+    outb(ctrl->iobase + IDE_CONTROL, ctrl->control);
+    ide_busy_wait(ctrl, IDE_SR_NULL);
 }
 
 
@@ -243,19 +294,79 @@ int ide_pio_write(ide_disk_t *disk, void *buf, u8 count, idx_t lba) {
 }
 
 
+// Big-endian to little-endian
+static void ide_swap_pairs(char *buf, u32 len) {
+    for (size_t i = 0; i < len; i += 2) {
+        // swap pairs of bytes
+        register char ch = buf[i];
+        buf[i] = buf[i + 1];
+        buf[i + 1] = ch;
+    }
+
+    buf[len - 1] = '\0';
+}
+
+
+// Identify disk
+static u32 ide_identify(ide_disk_t *disk, u16 *buf) {
+    LOGK("identifing disk %s...\n", disk->name);
+
+    /*
+        lock - select disk - wait - send identify cmd - wait - read data - unlock
+    */
+    mutex_lock(&disk->ctrl->lock);
+    ide_select_drive(disk);
+    outb(disk->ctrl->iobase + IDE_COMMAND, IDE_CMD_IDENTIFY);
+    ide_busy_wait(disk->ctrl, IDE_SR_NULL);
+    
+    ide_params_t *params = (ide_params_t *)buf;
+    // read 512 bytes -> buf
+    ide_pio_read_sector(disk, buf);
+
+    LOGK("disk %s total lba %d\n", disk->name, params->total_lba);
+
+    int8 ret = EOF;
+    if (params->total_lba == 0) // LBA total sectors == 0
+        goto rollback;
+
+    ide_swap_pairs(params->serial, sizeof(params->serial));
+    LOGK("disk %s serial number %s\n", disk->name, params->serial);
+
+    ide_swap_pairs(params->firmware, sizeof(params->firmware));
+    LOGK("disk %s firmware version %s\n", disk->name, params->firmware);
+
+    ide_swap_pairs(params->model, sizeof(params->model));
+    LOGK("disk %s model number %s\n", disk->name, params->model);
+
+    disk->total_lba = params->total_lba;
+    disk->cylinders = params->cylinders;
+    disk->heads = params->heads;
+    disk->sectors = params->sectors;
+    ret = 0;
+
+rollback:
+    mutex_unlock(&disk->ctrl->lock);
+    return ret;
+}
+
+
 static void ide_ctrl_init() {
     // init controller
+    u16 *buf = (u16 *)alloc_kpage(1);
     for (size_t cidx = 0; cidx < IDE_CTRL_NR; cidx++) {
         ide_ctrl_t *ctrl = &controllers[cidx];
         sprintf(ctrl->name, "ide%u", cidx); // ide0 ide1
         mutex_init(&ctrl->lock);
         ctrl->active = NULL;
+        ctrl->waiter = NULL;
 
         if (cidx) {
             ctrl->iobase = IDE_IOBASE_SECONDARY;
         } else {
             ctrl->iobase = IDE_IOBASE_PRIMARY;
         }
+
+        ctrl->control = inb(ctrl->iobase + IDE_CONTROL);
 
         for (size_t didx = 0; didx < IDE_DISK_NR; didx++) {
             ide_disk_t *disk = &ctrl->disks[didx];
@@ -272,8 +383,10 @@ static void ide_ctrl_init() {
                 disk->master = true;
                 disk->selector = IDE_LBA_MASTER;
             }
+            ide_identify(disk, buf);
         }
     }
+    free_kpage((u32)buf, 1);
 }
 
 
