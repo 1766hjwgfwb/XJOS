@@ -150,6 +150,7 @@ static u32 get_page() {
         // find a free page
         if (!memory_map[i]) {
             memory_map[i] = 1;  // set as used
+            assert(free_pages > 0);
             free_pages--;
 
             LOGK("Get page index 0x%x\n", i);

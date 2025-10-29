@@ -9,6 +9,34 @@
 
 #define IDE_CTRL_NR 2
 #define IDE_DISK_NR 2
+#define IDE_PART_NR 4   // mbr max partition number
+
+typedef struct part_entry_t {
+    u8 bootable;           // bootable flag
+    u8 start_head;         // start head
+    u8 start_sector : 6;    // start sector
+    u16 start_cylinder : 10; // start cylinder
+    u8 system;              // system id
+    u8 end_head;           // end head
+    u8 end_sector : 6;      // end sector
+    u16 end_cylinder : 10;   // end cylinder
+    u32 start;              // start lba
+    u32 count;              // use sector count
+}_packed part_entry_t;
+
+typedef struct boot_sector_t {
+    u8 code[446];           // boot code
+    part_entry_t entry[4];  // partition table
+    u16 signature;          // 55aa
+}_packed boot_sector_t;
+
+typedef struct ide_part_t {
+    char name[8];               // partition name
+    struct ide_disk_t *disk;    // disk pointer
+    u32 system;                 // system type
+    u32 start;                  // start lba 
+    u32 count;                  // use sector count
+}ide_part_t;
 
 typedef struct ide_disk_t {
     char name[8];               // disk name
@@ -19,6 +47,7 @@ typedef struct ide_disk_t {
     u32 cylinders;               // cylinder count
     u32 heads;                   // head count
     u32 sectors;                 // sector count
+    ide_part_t parts[IDE_PART_NR]; // disk partition
 }ide_disk_t;
 
 typedef struct ide_ctrl_t {

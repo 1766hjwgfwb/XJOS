@@ -68,6 +68,13 @@
 #define IDE_LBA_MASTER 0b11100000 // LBA Mode, Master Drive (0xE0)
 #define IDE_LBA_SLAVE 0b11110000  // LBA Mode, Slave Drive (0xF0)
 
+typedef enum PART_FS {
+    PART_FS_FAT12 = 1,      // fat 12
+    PART_FS_EXTENDED = 5,   // extend part
+    PART_FS_MINIX = 0x80,   // minux
+    PART_FS_LINUX = 0x83    // linux
+}PART_FS;
+
 /*
  * This structure maps the 512-byte data block returned by
  * the ATA IDENTIFY DEVICE command. The comments indicate the
@@ -294,6 +301,18 @@ int ide_pio_write(ide_disk_t *disk, void *buf, u8 count, idx_t lba) {
 }
 
 
+// read partiton
+int ide_pio_part_read(ide_part_t *part, void *buf, u8 count, idx_t lba) {
+    return ide_pio_read(part->disk, buf, count, part->start + lba);
+}
+
+
+// write partiton
+int ide_pio_part_wrtie(ide_part_t *part, void *buf, u8 count, idx_t lba) {
+    return ide_pio_write(part->disk, buf, count, part->start + lba);
+}
+
+
 // Big-endian to little-endian
 static void ide_swap_pairs(char *buf, u32 len) {
     for (size_t i = 0; i < len; i += 2) {
@@ -350,6 +369,57 @@ rollback:
 }
 
 
+static void ide_part_init(ide_disk_t *disk, u16 *buf) {
+    // disk died
+    if (!disk->total_lba)
+        return;
+
+    // read mbr
+    ide_pio_read(disk, buf, 1, 0);
+
+    boot_sector_t *boot = (boot_sector_t *)buf;
+
+    for (size_t i = 0; i < IDE_PART_NR; i++) {
+        part_entry_t *entry = &boot->entry[i];
+        ide_part_t *part = &disk->parts[i];
+
+        if (!entry->count)
+            continue;
+
+        sprintf(part->name, "%s%d", disk->name, i + 1);
+        LOGK("part %s \n", part->name);
+        LOGK("      bootable %d\n", entry->bootable);
+        LOGK("      start lba %d\n", entry->start);
+        LOGK("      count %d\n", entry->count);
+        LOGK("      system 0x%x\n", entry->system);
+
+        part->disk = disk;
+        part->count = entry->count;
+        part->system = entry->system;
+        part->start = entry->start;
+
+        if (entry->system == PART_FS_EXTENDED) {
+            LOGK("Unsupported extended partition!!!\n");
+
+            boot_sector_t *eboot = (boot_sector_t *)(buf + SECTOR_SIZE);
+            ide_pio_read(disk, (void *)eboot, 1, entry->start);
+
+            for (size_t j = 0; j < IDE_PART_NR; j++) {
+                part_entry_t *eentry = &eboot->entry[j];
+                if (!eentry->count)
+                    continue;
+
+                LOGK("part %d extend %d\n", i, j);
+                LOGK("      bootable %d\n", eentry->bootable);
+                LOGK("      start lba %d\n", eentry->start + entry->start);
+                LOGK("      count %d\n", eentry->count);
+                LOGK("      system 0x%x\n", eentry->system);
+            }
+        }
+    }
+}
+
+
 static void ide_ctrl_init() {
     // init controller
     u16 *buf = (u16 *)alloc_kpage(1);
@@ -384,6 +454,7 @@ static void ide_ctrl_init() {
                 disk->selector = IDE_LBA_MASTER;
             }
             ide_identify(disk, buf);
+            ide_part_init(disk, buf);
         }
     }
     free_kpage((u32)buf, 1);
