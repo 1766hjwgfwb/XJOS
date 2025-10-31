@@ -2,25 +2,13 @@
 #define XJOS_RB_TREE_H
 
 
-#include <xjos/types.h>
+#include <libc/stddef.h>
+
+#define container_of(ptr, type, member) \
+    element_entry(type, member, ptr)
 
 #define RB_RED 0
 #define RB_BLACK 1
-
-// ===================================
-//      Core Utility Macros
-// ===================================
-
-/**
- * @brief Calculates the byte offset of a member within a struct.
- */
-#define element_offset(type, member) ((u32)(&((type *)0)->member))
-
-/**
- * @brief Calculates the starting address of the containing struct
- * from a pointer to one of its members.
- */
-#define element_entry(type, member, ptr) ((type *)((u32)(ptr) - element_offset(type, member)))
 
 // ===================================
 //      Core Data Structures
