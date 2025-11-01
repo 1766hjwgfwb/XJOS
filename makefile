@@ -12,6 +12,9 @@ CC := gcc
 LD := ld
 ASM := nasm
 
+# Get libgcc path dynamically (for 64-bit ops on 32-bit)
+LIBGCC := $(shell $(CC) -m32 -print-libgcc-file-name)
+
 # ====================================================================
 #                   Compilation and Linker Options
 # ====================================================================
@@ -81,7 +84,7 @@ $(BUILD_DIR)/%.o: $(SRC_DIR)/%.asm
 $(BUILD_DIR)/kernel.bin: $(ENTRY_OBJ) $(OTHER_OBJS)
 	@mkdir -p $(dir $@)
 	@echo "LD $@"
-	$(LD) $(LDFLAGS) $(ENTRY_OBJ) $(OTHER_OBJS) -o $@ -Ttext $(ENTRYPOINT)
+	$(LD) $(LDFLAGS) $(ENTRY_OBJ) $(OTHER_OBJS) $(LIBGCC) -o $@ -Ttext $(ENTRYPOINT)  # 修改：添加 $(LIBGCC)
 
 # --- Generate Final Image File ---
 $(BUILD_DIR)/system.bin: $(BUILD_DIR)/kernel.bin

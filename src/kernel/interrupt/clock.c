@@ -29,6 +29,11 @@ u32 jiffy = JIFFY;
 
 u32 volatile beeping = 0;
 
+// (extern declare from task.c idle_task and cfs_task_count)
+extern task_t *idle_task;
+extern u32 cfs_task_count;
+extern bool task_wakeup(); // (!!!!) NEW
+
 
 void start_beep() {
     if (!beeping) {
@@ -48,22 +53,38 @@ void stop_beep() {
 }
 
 
+/**
+ * @brief (!!!!) Fixed CFS Clock Interrupt (!!!!)
+ */
 void clock_handler(int vector) {
     assert(vector == 0x20);
     send_eoi(vector);
 
     jiffies++;
 
-    task_wakeup();
-
-    // task_aging();
-
+    // 1. wakeup sleeping tasks
+    bool woken_up = task_wakeup(); // (!!!!) NEW
+    
+    // (Original task_aging() removed)
     
     task_t *task = running_task();    
     assert(task->magic == XJOS_MAGIC);
 
-    task->jiffies = jiffies;
+    // 2. idle task check
+    if (task == idle_task) {
+        // if idle running, but other tasks ready (woken up or existing)
+        if (cfs_task_count > 0) {
+            schedule();
+        }
+        return;
+    }
+    
+    // 3. decrement current task's remaining ticks
     task->ticks--;      // time
+    
+    // 4. (!!!!) Preemption Check (!!!!)
+    // if timeslice zero, OR
+    // new task woken up (woken_up == true) AND ready queue not empty
     if (task->ticks <= 0) {
         schedule();
     }
